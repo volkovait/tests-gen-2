@@ -1,0 +1,50 @@
+# Сборка и запуск как в https://habr.com/ru/companies/selectel/articles/836228/
+# Nginx :80 → Next.js; static-server доступен приложению по имени сервиса.
+#
+# Подготовьте .env в корне репозитория (или экспортируйте переменные) с:
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY  (или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+#
+# Запуск: docker compose up --build
+
+networks:
+  dev:
+    driver: bridge
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+      - static-server
+    networks:
+      - dev
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+    environment:
+      STATIC_SERVER_URL: http://static-server:3001
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+    depends_on:
+      - static-server
+    networks:
+      - dev
+
+  static-server:
+    build:
+      context: .
+      dockerfile: docker/static-server.Dockerfile
+    networks:
+      - dev
