@@ -10,8 +10,7 @@ interface Answer {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
-    // Check authentication
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

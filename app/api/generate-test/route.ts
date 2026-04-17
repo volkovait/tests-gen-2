@@ -11,17 +11,27 @@ interface Question {
 }
 
 interface ParsedQuestion {
+  type?: string
   question: string
   options?: string[]
   correct_answer: string | number
   explanation?: string
 }
 
+function normalizeQuestionType(
+  raw: string | undefined,
+  fallback: Question["type"],
+): Question["type"] {
+  if (raw === "multiple_choice" || raw === "true_false" || raw === "fill_blank") {
+    return raw
+  }
+  return fallback
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
-    // Check authentication
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -137,14 +147,22 @@ Return ONLY the JSON array, no other text.`
       return NextResponse.json({ error: "Failed to parse generated questions" }, { status: 500 })
     }
 
+    const defaultType = normalizeQuestionType(
+      questionTypes.find(
+        (t): t is Question["type"] =>
+          t === "multiple_choice" || t === "true_false" || t === "fill_blank",
+      ),
+      "multiple_choice",
+    )
+
     // Transform questions to our format
     const questions: Question[] = parsedQuestions.map((q: ParsedQuestion, index: number) => ({
       id: `q-${index + 1}`,
-      type: q.type as Question["type"],
+      type: normalizeQuestionType(q.type, defaultType),
       question: q.question,
       options: q.options,
       correctAnswer: q.correct_answer,
-      explanation: q.explanation
+      explanation: q.explanation,
     }))
 
     // Step 3: Save test to database
@@ -158,8 +176,8 @@ Return ONLY the JSON array, no other text.`
         questions: questions,
         settings: {
           difficulty,
-          questionTypes
-        }
+          questionTypes,
+        },
       })
       .select("id")
       .single()
@@ -169,10 +187,10 @@ Return ONLY the JSON array, no other text.`
       return NextResponse.json({ error: "Failed to save test" }, { status: 500 })
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       testId: test.id,
-      questionCount: questions.length
+      questionCount: questions.length,
     })
 
   } catch (error) {

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import logoImg from "@/assets/logo.png"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -53,10 +54,9 @@ interface Answer {
 
 interface TestTakingClientProps {
   test: Test
-  userId: string
 }
 
-export default function TestTakingClient({ test, userId }: TestTakingClientProps) {
+export default function TestTakingClient({ test }: TestTakingClientProps) {
   const router = useRouter()
   const [mode, setMode] = useState<"preview" | "taking" | "results">("preview")
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -182,10 +182,10 @@ export default function TestTakingClient({ test, userId }: TestTakingClientProps
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3">
+            <Link href="/upload" className="flex items-center gap-3">
               <Image
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp"
-                alt="Lingua Bloom Logo"
+                src={logoImg}
+                alt="Lingua Bloom"
                 width={36}
                 height={36}
                 className="rounded-lg"
@@ -193,9 +193,9 @@ export default function TestTakingClient({ test, userId }: TestTakingClientProps
               <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
             </Link>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard">
+              <Link href="/upload">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                Back to upload
               </Link>
             </Button>
           </div>
@@ -263,10 +263,10 @@ export default function TestTakingClient({ test, userId }: TestTakingClientProps
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3">
+            <Link href="/upload" className="flex items-center gap-3">
               <Image
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp"
-                alt="Lingua Bloom Logo"
+                src={logoImg}
+                alt="Lingua Bloom"
                 width={36}
                 height={36}
                 className="rounded-lg"
@@ -308,9 +308,9 @@ export default function TestTakingClient({ test, userId }: TestTakingClientProps
               Retake Test
             </Button>
             <Button asChild className="flex-1">
-              <Link href="/dashboard">
+              <Link href="/upload">
                 <Home className="h-4 w-4 mr-2" />
-                Dashboard
+                New upload
               </Link>
             </Button>
           </div>
@@ -421,8 +421,8 @@ export default function TestTakingClient({ test, userId }: TestTakingClientProps
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp"
-              alt="Lingua Bloom Logo"
+              src={logoImg}
+              alt="Lingua Bloom"
               width={36}
               height={36}
               className="rounded-lg"

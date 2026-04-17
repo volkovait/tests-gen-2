@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import TestTakingClient from "./test-client"
 
 interface Question {
@@ -30,7 +30,7 @@ export default async function TestPage({ params }: { params: Promise<{ id: strin
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   if (!user) {
     redirect("/auth/login")
   }
@@ -46,5 +46,5 @@ export default async function TestPage({ params }: { params: Promise<{ id: strin
     notFound()
   }
 
-  return <TestTakingClient test={test as Test} userId={user.id} />
+  return <TestTakingClient test={test as Test} />
 }

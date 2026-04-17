@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import logoImg from "@/assets/logo.png"
 import { useDropzone } from "react-dropzone"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +25,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 
 type QuestionType = "multiple_choice" | "true_false" | "fill_blank"
+
+const DRAFT_TEST_STORAGE_KEY = "linguaBloomDraftTest"
 
 interface TestSettings {
   title: string
@@ -114,8 +117,15 @@ export default function UploadPage() {
         throw new Error(data.error || "Failed to generate test")
       }
 
-      // Redirect to the test page
-      router.push(`/test/${data.testId}`)
+      if (data.draft === true && data.test) {
+        sessionStorage.setItem(DRAFT_TEST_STORAGE_KEY, JSON.stringify(data.test))
+        router.push("/test/draft")
+        return
+      }
+
+      if (data.testId) {
+        router.push(`/test/${data.testId}`)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
       setStep("configure")
@@ -129,20 +139,20 @@ export default function UploadPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-3">
+          <Link href="/upload" className="flex items-center gap-3">
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp"
-              alt="Lingua Bloom Logo"
-              width={36}
-              height={36}
+              src={logoImg}
+              alt="Lingua Bloom"
+              width={80}
+              height={80}
               className="rounded-lg"
             />
             <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
           </Link>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard">
+            <Link href="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+              Home
             </Link>
           </Button>
         </div>

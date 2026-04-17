@@ -11,6 +11,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { GoogleAuthButton } from "@/components/auth/google-auth-button"
+import logoImg from "@/assets/logo.png"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -90,8 +93,8 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <Link href="/" className="flex items-center gap-3 mb-2">
-            <Image 
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp"
+            <Image
+              src={logoImg}
               alt="Lingua Bloom"
               width={56}
               height={56}
@@ -109,7 +112,16 @@ export default function SignUpPage() {
               Enter your details to create a new account
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            <GoogleAuthButton
+              nextPath="/dashboard"
+              label="Sign up with Google"
+            />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <Separator className="flex-1" />
+              <span className="shrink-0">or with email</span>
+              <Separator className="flex-1" />
+            </div>
             <form onSubmit={handleSignUp}>
               <FieldGroup>
                 <Field>
