@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import logoImg from "@/assets/logo.png"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, ArrowLeft } from "lucide-react"
@@ -12,10 +13,10 @@ export default function SignUpSuccessPage() {
         <div className="container mx-auto px-4 h-16 flex items-center">
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp"
+              src={logoImg}
               alt="Lingua Bloom Logo"
-              width={36}
-              height={36}
+              width={80}
+              height={80}
               className="rounded-lg"
             />
             <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>

@@ -186,8 +186,8 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
               <Image
                 src={logoImg}
                 alt="Lingua Bloom"
-                width={36}
-                height={36}
+                width={80}
+                height={80}
                 className="rounded-lg"
               />
               <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
@@ -267,8 +267,8 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
               <Image
                 src={logoImg}
                 alt="Lingua Bloom"
-                width={36}
-                height={36}
+                width={80}
+                height={80}
                 className="rounded-lg"
               />
               <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
@@ -423,8 +423,8 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
             <Image
               src={logoImg}
               alt="Lingua Bloom"
-              width={36}
-              height={36}
+              width={80}
+              height={80}
               className="rounded-lg"
             />
             <span className="font-serif text-lg font-semibold text-foreground">{test.title}</span>
