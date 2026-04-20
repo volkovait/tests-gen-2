@@ -15,6 +15,9 @@ const playfair = Playfair_Display({
   display: 'swap',
 })
 
+const faviconUrl =
+  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp'
+
 export const metadata: Metadata = {
   title: {
     default: 'Lingua Bloom - AI-Powered Test Generation',
@@ -37,21 +40,8 @@ export const metadata: Metadata = {
     description: 'Transform your PDFs into interactive tests and exercises with AI.',
   },
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: [{ url: faviconUrl, type: 'image/webp' }],
+    apple: faviconUrl,
   },
 }
 
