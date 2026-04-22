@@ -14,6 +14,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { GoogleAuthButton } from "@/components/auth/google-auth-button"
 import logoImg from "@/assets/logo.png"
+import { LABELS } from "@/lib/consts"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -30,12 +31,12 @@ export default function SignUpPage() {
     setError(null)
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError(LABELS.AUTH_PASSWORD_MISMATCH)
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError(LABELS.AUTH_PASSWORD_MIN_LENGTH)
       return
     }
 
@@ -72,15 +73,16 @@ export default function SignUpPage() {
             <div className="mx-auto w-16 h-16 rounded-full gradient-bloom flex items-center justify-center mb-4">
               <CheckCircle2 className="h-8 w-8 text-primary-foreground" />
             </div>
-            <CardTitle className="text-2xl font-serif">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl font-serif">{LABELS.AUTH_EMAIL_CHECK_TITLE}</CardTitle>
             <CardDescription className="mt-2">
-              We&apos;ve sent a confirmation link to <strong>{email}</strong>. 
-              Please check your inbox and click the link to activate your account.
+              {LABELS.AUTH_EMAIL_CHECK_BEFORE}
+              <strong>{email}</strong>
+              {LABELS.AUTH_EMAIL_CHECK_AFTER}
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
             <Link href="/auth/login">
-              <Button variant="outline">Back to Sign In</Button>
+              <Button variant="outline">{LABELS.AUTH_BACK_TO_SIGN_IN}</Button>
             </Link>
           </CardFooter>
         </Card>
@@ -95,52 +97,52 @@ export default function SignUpPage() {
           <Link href="/" className="flex items-center gap-3 mb-2">
             <Image
               src={logoImg}
-              alt="Lingua Bloom"
+              alt={LABELS.AUTH_BRAND_LOGO_ALT}
               width={56}
               height={56}
               className="rounded-lg"
             />
-            <span className="text-2xl font-serif font-bold gradient-bloom-text">Lingua Bloom</span>
+            <span className="text-2xl font-serif font-bold gradient-bloom-text">{LABELS.AUTH_BRAND_DISPLAY}</span>
           </Link>
-          <p className="text-muted-foreground text-sm">Create your account to get started.</p>
+          <p className="text-muted-foreground text-sm">{LABELS.AUTH_SIGNUP_TAGLINE}</p>
         </div>
 
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-serif text-center">Create Account</CardTitle>
+            <CardTitle className="text-2xl font-serif text-center">{LABELS.AUTH_SIGNUP_TITLE}</CardTitle>
             <CardDescription className="text-center">
-              Enter your details to create a new account
+              {LABELS.AUTH_SIGNUP_DESCRIPTION}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <GoogleAuthButton
               nextPath="/dashboard"
-              label="Sign up with Google"
+              label={LABELS.AUTH_GOOGLE_SIGN_UP}
             />
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <Separator className="flex-1" />
-              <span className="shrink-0">or with email</span>
+              <span className="shrink-0">{LABELS.AUTH_OR_EMAIL}</span>
               <Separator className="flex-1" />
             </div>
             <form onSubmit={handleSignUp}>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="displayName">Display Name</FieldLabel>
+                  <FieldLabel htmlFor="displayName">{LABELS.AUTH_DISPLAY_NAME_LABEL}</FieldLabel>
                   <Input
                     id="displayName"
                     type="text"
-                    placeholder="Your name"
+                    placeholder={LABELS.AUTH_DISPLAY_NAME_PLACEHOLDER}
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     disabled={isLoading}
                   />
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="email">Email</FieldLabel>
+                  <FieldLabel htmlFor="email">{LABELS.AUTH_EMAIL_LABEL}</FieldLabel>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={LABELS.AUTH_EMAIL_PLACEHOLDER}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -148,11 +150,11 @@ export default function SignUpPage() {
                   />
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
+                  <FieldLabel htmlFor="password">{LABELS.AUTH_PASSWORD_LABEL}</FieldLabel>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Create a password (min. 6 characters)"
+                    placeholder={LABELS.AUTH_PASSWORD_CREATE_PLACEHOLDER}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -160,11 +162,11 @@ export default function SignUpPage() {
                   />
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+                  <FieldLabel htmlFor="confirmPassword">{LABELS.AUTH_CONFIRM_PASSWORD_LABEL}</FieldLabel>
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="Confirm your password"
+                    placeholder={LABELS.AUTH_CONFIRM_PASSWORD_PLACEHOLDER}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
@@ -188,19 +190,19 @@ export default function SignUpPage() {
                 {isLoading ? (
                   <>
                     <Spinner className="mr-2" />
-                    Creating account...
+                    {LABELS.AUTH_CREATING_ACCOUNT}
                   </>
                 ) : (
-                  "Create Account"
+                  LABELS.AUTH_CREATE_ACCOUNT_SUBMIT
                 )}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <div className="text-sm text-center text-muted-foreground">
-              Already have an account?{" "}
+              {LABELS.AUTH_HAVE_ACCOUNT}{" "}
               <Link href="/auth/login" className="text-primary hover:underline font-medium">
-                Sign in
+                {LABELS.AUTH_SIGN_IN_LINK}
               </Link>
             </div>
           </CardFooter>

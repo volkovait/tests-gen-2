@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { Activity, ArrowLeft } from "lucide-react"
+import { LABELS } from "@/lib/consts"
 
 type CheckState =
   | { status: "idle" }
@@ -45,9 +46,9 @@ export default function ServiceCheckPage() {
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-lg space-y-6">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link href="/upload">
+          <Link href="/dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад
+            {LABELS.SERVICE_CHECK_BACK}
           </Link>
         </Button>
 
@@ -55,14 +56,9 @@ export default function ServiceCheckPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-serif">
               <Activity className="h-5 w-5 text-primary" />
-              Проверка бэкенда
+              {LABELS.SERVICE_CHECK_TITLE}
             </CardTitle>
-            <CardDescription>
-              Запрос к Next API <code className="text-xs">/api/backend-health</code>, который
-              обращается к Express static-server (<code className="text-xs">/health</code>).
-              Перед проверкой запустите{" "}
-              <code className="text-xs">pnpm serve:static</code>.
-            </CardDescription>
+            <CardDescription>{LABELS.SERVICE_CHECK_DESCRIPTION}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
@@ -74,10 +70,10 @@ export default function ServiceCheckPage() {
               {state.status === "loading" ? (
                 <>
                   <Spinner className="mr-2" />
-                  Проверяю…
+                  {LABELS.SERVICE_CHECK_LOADING}
                 </>
               ) : (
-                "Проверить сервис"
+                LABELS.SERVICE_CHECK_BUTTON
               )}
             </Button>
 
@@ -91,8 +87,8 @@ export default function ServiceCheckPage() {
               >
                 <p className="mb-2 font-medium text-foreground">
                   {state.status === "success"
-                    ? "Успех"
-                    : `Ошибка${state.statusCode ? ` (${state.statusCode})` : ""}`}
+                    ? LABELS.SERVICE_CHECK_SUCCESS
+                    : `${LABELS.SERVICE_CHECK_ERROR}${state.statusCode ? ` (${state.statusCode})` : ""}`}
                 </p>
                 <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs text-muted-foreground">
                   {JSON.stringify(state.payload, null, 2)}

@@ -3,7 +3,16 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
 import { createServerClient } from '@supabase/ssr'
 
-const protectedRoutes = ['/dashboard', '/upload', '/generate', '/test', '/history']
+const protectedRoutes = [
+  '/dashboard',
+  '/upload',
+  '/generate',
+  '/test',
+  '/history',
+  '/create',
+  '/learn',
+  '/progress',
+]
 
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request)

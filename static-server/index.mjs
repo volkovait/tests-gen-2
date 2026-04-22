@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-/** Next.js `public/` at repo root — files are served at site root, e.g. /icon.svg */
+/** Next.js `public/` at repo root — files are served at site root, e.g. /placeholder.svg */
 const staticRoot = path.join(__dirname, '..', 'public')
 
 const app = express()

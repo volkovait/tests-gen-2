@@ -3,72 +3,60 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
-import logoImg from "@/assets/logo.png"
 import { useDropzone } from "react-dropzone"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
-import { 
-  Upload, 
-  FileText, 
-  X, 
-  ArrowLeft, 
-  ArrowRight, 
+import { AppShell } from "@/components/app-shell"
+import { LABELS } from "@/lib/consts"
+import {
+  Upload,
+  FileText,
+  X,
+  ArrowLeft,
+  ArrowRight,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  ImageIcon,
 } from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
 
-type QuestionType = "multiple_choice" | "true_false" | "fill_blank"
-
-const DRAFT_TEST_STORAGE_KEY = "linguaBloomDraftTest"
-
-interface TestSettings {
-  title: string
-  questionCount: number
-  questionTypes: QuestionType[]
-  difficulty: "easy" | "medium" | "hard"
-}
+type Step = "upload" | "configure" | "generating"
 
 export default function UploadPage() {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
-  const [step, setStep] = useState<"upload" | "configure" | "generating">("upload")
+  const [step, setStep] = useState<Step>("upload")
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [settings, setSettings] = useState<TestSettings>({
-    title: "",
-    questionCount: 10,
-    questionTypes: ["multiple_choice"],
-    difficulty: "medium"
-  })
+  const [title, setTitle] = useState("")
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const pdfFile = acceptedFiles[0]
-    if (pdfFile && pdfFile.type === "application/pdf") {
-      setFile(pdfFile)
-      setSettings(prev => ({
-        ...prev,
-        title: pdfFile.name.replace(".pdf", "").replace(/_/g, " ").replace(/-/g, " ")
-      }))
+    const f = acceptedFiles[0]
+    if (!f) return
+    const okPdf = f.type === "application/pdf"
+    const okImage = f.type.startsWith("image/")
+    if (okPdf || okImage) {
+      setFile(f)
+      setTitle(f.name.replace(/\.[^.]+$/, "").replace(/_/g, " ").replace(/-/g, " "))
       setError(null)
     } else {
-      setError("Please upload a PDF file")
+      setError(LABELS.UPLOAD_ERROR_FILE_TYPE)
     }
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      "application/pdf": [".pdf"]
+      "application/pdf": [".pdf"],
+      "image/png": [".png"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/webp": [".webp"],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024 // 10MB
+    maxSize: 12 * 1024 * 1024,
   })
 
   const handleRemoveFile = () => {
@@ -77,180 +65,130 @@ export default function UploadPage() {
   }
 
   const handleContinue = () => {
-    if (file) {
-      setStep("configure")
-    }
-  }
-
-  const handleQuestionTypeToggle = (type: QuestionType) => {
-    setSettings(prev => {
-      const types = prev.questionTypes.includes(type)
-        ? prev.questionTypes.filter(t => t !== type)
-        : [...prev.questionTypes, type]
-      return { ...prev, questionTypes: types.length > 0 ? types : prev.questionTypes }
-    })
+    if (file) setStep("configure")
   }
 
   const handleGenerate = async () => {
-    if (!file || settings.questionTypes.length === 0) return
-    
+    if (!file) return
     setIsGenerating(true)
     setStep("generating")
     setError(null)
-
     try {
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("title", settings.title || file.name.replace(".pdf", ""))
-      formData.append("questionCount", settings.questionCount.toString())
-      formData.append("questionTypes", JSON.stringify(settings.questionTypes))
-      formData.append("difficulty", settings.difficulty)
+      formData.append("title", title || file.name.replace(/\.[^.]+$/, ""))
 
-      const response = await fetch("/api/generate-test", {
+      const response = await fetch("/api/generate-interactive-page", {
         method: "POST",
-        body: formData
+        body: formData,
       })
-
-      const data = await response.json()
-
+      const data = (await response.json()) as { error?: string; lessonId?: string; viewUrl?: string }
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate test")
+        throw new Error(data.error || LABELS.UPLOAD_ERROR_GENERATION)
       }
-
-      if (data.draft === true && data.test) {
-        sessionStorage.setItem(DRAFT_TEST_STORAGE_KEY, JSON.stringify(data.test))
-        router.push("/test/draft")
-        return
-      }
-
-      if (data.testId) {
-        router.push(`/test/${data.testId}`)
+      if (data.lessonId) {
+        router.push(data.viewUrl || `/learn/${data.lessonId}/view`)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      setError(err instanceof Error ? err.message : LABELS.UPLOAD_ERROR_GENERIC)
       setStep("configure")
     } finally {
       setIsGenerating(false)
     }
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/upload" className="flex items-center gap-3">
-            <Image
-              src={logoImg}
-              alt="Lingua Bloom"
-              width={80}
-              height={80}
-              className="rounded-lg"
-            />
-            <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
-          </Link>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Home
-            </Link>
-          </Button>
-        </div>
-      </header>
+  const isPdf = file?.type === "application/pdf"
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-4 mb-8">
+  return (
+    <AppShell active="upload">
+      <main className="container mx-auto max-w-2xl px-4 py-8">
+        <div className="mb-6 md:hidden">
+          <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <ArrowLeft className="h-4 w-4" />
+            {LABELS.NAV_CABINET}
+          </Link>
+        </div>
+
+        <div className="mb-8 flex items-center justify-center gap-4">
           <div className={`flex items-center gap-2 ${step === "upload" ? "text-primary" : "text-muted-foreground"}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === "upload" ? "bg-primary text-primary-foreground" : 
-              file ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-            }`}>
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                step === "upload" ? "bg-primary text-primary-foreground" : file ? "bg-primary/20 text-primary" : "bg-muted"
+              }`}
+            >
               {file ? <CheckCircle2 className="h-4 w-4" /> : "1"}
             </div>
-            <span className="text-sm font-medium hidden sm:inline">Upload</span>
+            <span className="hidden text-sm font-medium sm:inline">{LABELS.UPLOAD_STEP_FILE}</span>
           </div>
-          <div className="w-12 h-0.5 bg-border" />
+          <div className="h-0.5 w-12 bg-border" />
           <div className={`flex items-center gap-2 ${step === "configure" ? "text-primary" : "text-muted-foreground"}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === "configure" ? "bg-primary text-primary-foreground" : 
-              step === "generating" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-            }`}>
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                step === "configure" ? "bg-primary text-primary-foreground" : step === "generating" ? "bg-primary/20 text-primary" : "bg-muted"
+              }`}
+            >
               {step === "generating" ? <CheckCircle2 className="h-4 w-4" /> : "2"}
             </div>
-            <span className="text-sm font-medium hidden sm:inline">Configure</span>
+            <span className="hidden text-sm font-medium sm:inline">{LABELS.UPLOAD_STEP_TITLE}</span>
           </div>
-          <div className="w-12 h-0.5 bg-border" />
+          <div className="h-0.5 w-12 bg-border" />
           <div className={`flex items-center gap-2 ${step === "generating" ? "text-primary" : "text-muted-foreground"}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === "generating" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-            }`}>
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                step === "generating" ? "bg-primary text-primary-foreground" : "bg-muted"
+              }`}
+            >
               <Sparkles className="h-4 w-4" />
             </div>
-            <span className="text-sm font-medium hidden sm:inline">Generate</span>
+            <span className="hidden text-sm font-medium sm:inline">{LABELS.UPLOAD_STEP_DONE}</span>
           </div>
         </div>
 
-        {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+            <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
-        {/* Step 1: Upload */}
         {step === "upload" && (
           <Card>
             <CardHeader>
-              <CardTitle className="font-serif">Upload Your PDF</CardTitle>
-              <CardDescription>
-                Drag and drop your study material or click to browse
-              </CardDescription>
+              <CardTitle className="font-serif">{LABELS.UPLOAD_CARD_MATERIAL_TITLE}</CardTitle>
+              <CardDescription>{LABELS.UPLOAD_CARD_MATERIAL_DESC}</CardDescription>
             </CardHeader>
             <CardContent>
               {!file ? (
                 <div
                   {...getRootProps()}
-                  className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-                    isDragActive 
-                      ? "border-primary bg-primary/5" 
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                  className={`cursor-pointer rounded-lg border-2 border-dashed p-12 text-center transition-colors ${
+                    isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/40 hover:bg-muted/40"
                   }`}
                 >
                   <input {...getInputProps()} />
-                  <Upload className={`h-12 w-12 mx-auto mb-4 ${isDragActive ? "text-primary" : "text-muted-foreground"}`} />
-                  <p className="text-lg font-medium text-foreground mb-1">
-                    {isDragActive ? "Drop your PDF here" : "Drag & drop your PDF"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    or click to browse (max 10MB)
-                  </p>
+                  <Upload className={`mx-auto mb-4 h-12 w-12 ${isDragActive ? "text-primary" : "text-muted-foreground"}`} />
+                  <p className="mb-1 text-lg font-medium">{isDragActive ? LABELS.UPLOAD_DROP_RELEASE : LABELS.UPLOAD_DROP_PROMPT}</p>
+                  <p className="text-sm text-muted-foreground">{LABELS.UPLOAD_MAX_SIZE}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-primary" />
+                  <div className="flex items-center gap-4 rounded-lg border border-primary/25 bg-card p-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                      {isPdf ? <FileText className="h-6 w-6 text-primary" /> : <ImageIcon className="h-6 w-6 text-primary" />}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{file.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{file.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                        {LABELS.UPLOAD_FILE_SIZE_MB.replace("{size}", (file.size / 1024 / 1024).toFixed(2))}
                       </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleRemoveFile}
-                      className="shrink-0"
-                    >
+                    <Button variant="ghost" size="icon" onClick={handleRemoveFile} className="shrink-0">
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                   <Button onClick={handleContinue} className="w-full">
-                    Continue to Configure
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    {LABELS.UPLOAD_NEXT}
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               )}
@@ -258,142 +196,43 @@ export default function UploadPage() {
           </Card>
         )}
 
-        {/* Step 2: Configure */}
         {step === "configure" && file && (
           <Card>
             <CardHeader>
-              <CardTitle className="font-serif">Configure Your Test</CardTitle>
-              <CardDescription>
-                Customize how your test will be generated
-              </CardDescription>
+              <CardTitle className="font-serif">{LABELS.UPLOAD_LESSON_TITLE}</CardTitle>
+              <CardDescription>{LABELS.UPLOAD_LESSON_TITLE_DESC}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Test Title */}
               <div className="space-y-2">
-                <Label htmlFor="title">Test Title</Label>
-                <Input
-                  id="title"
-                  value={settings.title}
-                  onChange={(e) => setSettings(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter a title for your test"
-                />
+                <Label htmlFor="title">{LABELS.UPLOAD_LABEL_TITLE}</Label>
+                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={LABELS.UPLOAD_TITLE_PLACEHOLDER} />
               </div>
-
-              {/* Question Count */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Number of Questions</Label>
-                  <span className="text-sm font-medium text-primary">{settings.questionCount}</span>
-                </div>
-                <Slider
-                  value={[settings.questionCount]}
-                  onValueChange={([value]) => setSettings(prev => ({ ...prev, questionCount: value }))}
-                  min={5}
-                  max={30}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>5 questions</span>
-                  <span>30 questions</span>
-                </div>
-              </div>
-
-              {/* Question Types */}
-              <div className="space-y-3">
-                <Label>Question Types</Label>
-                <div className="space-y-2">
-                  {[
-                    { id: "multiple_choice" as const, label: "Multiple Choice", desc: "4 options, one correct answer" },
-                    { id: "true_false" as const, label: "True/False", desc: "Simple yes or no questions" },
-                    { id: "fill_blank" as const, label: "Fill in the Blank", desc: "Complete the sentence" }
-                  ].map((type) => (
-                    <div
-                      key={type.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        settings.questionTypes.includes(type.id)
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-muted/50"
-                      }`}
-                      onClick={() => handleQuestionTypeToggle(type.id)}
-                    >
-                      <Checkbox
-                        checked={settings.questionTypes.includes(type.id)}
-                        onCheckedChange={() => handleQuestionTypeToggle(type.id)}
-                      />
-                      <div>
-                        <p className="font-medium text-foreground">{type.label}</p>
-                        <p className="text-xs text-muted-foreground">{type.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Difficulty */}
-              <div className="space-y-3">
-                <Label>Difficulty Level</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "easy" as const, label: "Easy" },
-                    { id: "medium" as const, label: "Medium" },
-                    { id: "hard" as const, label: "Hard" }
-                  ].map((level) => (
-                    <Button
-                      key={level.id}
-                      type="button"
-                      variant={settings.difficulty === level.id ? "default" : "outline"}
-                      onClick={() => setSettings(prev => ({ ...prev, difficulty: level.id }))}
-                      className="w-full"
-                    >
-                      {level.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep("upload")}
-                  className="flex-1"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setStep("upload")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {LABELS.UPLOAD_BACK}
                 </Button>
-                <Button
-                  onClick={handleGenerate}
-                  disabled={settings.questionTypes.length === 0}
-                  className="flex-1"
-                >
-                  Generate Test
-                  <Sparkles className="h-4 w-4 ml-2" />
+                <Button className="flex-1" onClick={handleGenerate}>
+                  {LABELS.UPLOAD_CREATE_LESSON}
+                  <Sparkles className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 3: Generating */}
         {step === "generating" && (
           <Card>
-            <CardContent className="py-12">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                </div>
-                <h3 className="text-xl font-serif font-semibold text-foreground mb-2">
-                  Generating Your Test
-                </h3>
-                <p className="text-muted-foreground max-w-sm mx-auto">
-                  Our AI is analyzing your document and creating personalized questions. This may take a moment...
-                </p>
+            <CardContent className="py-12 text-center">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
+              <h3 className="mb-2 font-serif text-xl font-semibold">{LABELS.UPLOAD_GENERATING_TITLE}</h3>
+              <p className="mx-auto max-w-sm text-muted-foreground">{LABELS.UPLOAD_GENERATING_DESC}</p>
             </CardContent>
           </Card>
         )}
       </main>
-    </div>
+    </AppShell>
   )
 }

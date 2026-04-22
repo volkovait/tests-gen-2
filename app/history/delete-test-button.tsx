@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Trash2, Loader2 } from "lucide-react"
+import { LABELS } from "@/lib/consts"
 
 interface DeleteTestButtonProps {
   testId: string
@@ -55,13 +56,13 @@ export function DeleteTestButton({ testId, testTitle }: DeleteTestButtonProps) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Test</AlertDialogTitle>
+          <AlertDialogTitle>{LABELS.DELETE_TEST_TITLE}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete &quot;{testTitle}&quot;? This will also delete all associated test attempts. This action cannot be undone.
+            {LABELS.DELETE_TEST_DESCRIPTION.replace("{title}", testTitle)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>{LABELS.DELETE_TEST_CANCEL}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             disabled={isDeleting}
@@ -70,10 +71,10 @@ export function DeleteTestButton({ testId, testTitle }: DeleteTestButtonProps) {
             {isDeleting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Deleting...
+                {LABELS.DELETE_TEST_DELETING}
               </>
             ) : (
-              "Delete"
+              LABELS.DELETE_TEST_CONFIRM
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
