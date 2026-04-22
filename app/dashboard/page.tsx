@@ -18,6 +18,17 @@ import {
 } from "lucide-react"
 import { LABELS } from "@/lib/consts"
 
+function joinTest(tests: unknown): { id: string; title: string } | null {
+  if (tests === null || tests === undefined) return null
+  const row = Array.isArray(tests) ? tests[0] : tests
+  if (!row || typeof row !== "object") return null
+  if (!("id" in row) || !("title" in row)) return null
+  const id = row.id
+  const title = row.title
+  if (typeof id !== "string" || typeof title !== "string") return null
+  return { id, title }
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
@@ -29,9 +40,25 @@ export default async function DashboardPage() {
     redirect("/auth/login")
   }
 
-  const [testsResult, attemptsResult, lessonsRes, lessonsCountRes, progressRes] = await Promise.all([
-    supabase.from("tests").select("id", { count: "exact" }).eq("user_id", user.id),
-    supabase.from("test_attempts").select("id, score, total_questions, percentage", { count: "exact" }).eq("user_id", user.id),
+  const [
+    testsCountRes,
+    attemptsCountRes,
+    attemptsAvgRes,
+    lessonsRes,
+    lessonsCountRes,
+    progressRes,
+    recentTestsRes,
+    recentAttemptsRes,
+    profileRes,
+  ] = await Promise.all([
+    supabase.from("tests").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("test_attempts").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase
+      .from("test_attempts")
+      .select("avg_pct:avg(percentage)")
+      .eq("user_id", user.id)
+      .not("percentage", "is", null)
+      .maybeSingle(),
     supabase
       .from("lessons")
       .select("id, title, source_type, created_at")
@@ -40,34 +67,16 @@ export default async function DashboardPage() {
       .limit(3),
     supabase.from("lessons").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("user_progress").select("lessons_completed, xp").eq("user_id", user.id).maybeSingle(),
-  ])
-
-  const totalTests = testsResult.count || 0
-  const totalAttempts = attemptsResult.count || 0
-  const recentLessons = lessonsRes.error ? [] : lessonsRes.data ?? []
-  const totalLessons = lessonsCountRes.error ? recentLessons.length : lessonsCountRes.count ?? recentLessons.length
-  const lessonsCompleted = (progressRes.data?.lessons_completed as number | undefined) ?? 0
-  const xp = (progressRes.data?.xp as number | undefined) ?? 0
-
-  let averageScore = 0
-  if (attemptsResult.data && attemptsResult.data.length > 0) {
-    const scores = attemptsResult.data.filter((a) => a.percentage !== null).map((a) => Number(a.percentage))
-    if (scores.length > 0) {
-      averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-    }
-  }
-
-  const { data: recentTests } = await supabase
-    .from("tests")
-    .select("id, title, source_filename, question_count, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(4)
-
-  const { data: recentAttempts } = await supabase
-    .from("test_attempts")
-    .select(
-      `
+    supabase
+      .from("tests")
+      .select("id, title, source_filename, question_count, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("test_attempts")
+      .select(
+        `
       id,
       score,
       total_questions,
@@ -78,14 +87,29 @@ export default async function DashboardPage() {
         title
       )
     `,
-    )
-    .eq("user_id", user.id)
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false })
-    .limit(4)
+      )
+      .eq("user_id", user.id)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(4),
+    supabase.from("profiles").select("display_name").eq("id", user.id).single(),
+  ])
 
-  const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user.id).single()
+  const totalTests = testsCountRes.count ?? 0
+  const totalAttempts = attemptsCountRes.count ?? 0
+  const recentLessons = lessonsRes.error ? [] : lessonsRes.data ?? []
+  const totalLessons = lessonsCountRes.error ? recentLessons.length : lessonsCountRes.count ?? recentLessons.length
+  const lessonsCompleted = (progressRes.data?.lessons_completed as number | undefined) ?? 0
+  const xp = (progressRes.data?.xp as number | undefined) ?? 0
 
+  const avgRaw = attemptsAvgRes.data?.avg_pct
+  const averageScore =
+    avgRaw !== null && avgRaw !== undefined && !Number.isNaN(Number(avgRaw)) ? Math.round(Number(avgRaw)) : 0
+
+  const recentTests = recentTestsRes.data ?? []
+  const recentAttempts = recentAttemptsRes.data ?? []
+
+  const profile = profileRes.data
   const displayName = profile?.display_name || user.email?.split("@")[0] || LABELS.DEFAULT_STUDENT_NAME
 
   return (
@@ -259,10 +283,12 @@ export default async function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentAttempts.map((attempt) => (
+                  {recentAttempts.map((attempt) => {
+                    const testMeta = joinTest(attempt.tests)
+                    return (
                     <Link
                       key={attempt.id}
-                      href={`/test/${(attempt.tests as unknown as { id: string })?.id ?? ""}`}
+                      href={`/test/${testMeta?.id ?? ""}`}
                       className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-card"
                     >
                       <div className="flex items-center gap-3">
@@ -278,7 +304,7 @@ export default async function DashboardPage() {
                           {Math.round(Number(attempt.percentage))}%
                         </div>
                         <div>
-                          <p className="font-medium">{(attempt.tests as unknown as { title: string })?.title || LABELS.TEST_FALLBACK_TITLE}</p>
+                          <p className="font-medium">{testMeta?.title ?? LABELS.TEST_FALLBACK_TITLE}</p>
                           <p className="text-xs text-muted-foreground">
                             {LABELS.DASHBOARD_SCORE_CORRECT
                               .replace("{score}", String(attempt.score))
@@ -288,7 +314,8 @@ export default async function DashboardPage() {
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     </Link>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>

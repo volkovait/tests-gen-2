@@ -21,12 +21,16 @@ export default async function ProgressPage() {
     redirect("/auth/login?next=/progress")
   }
 
-  const { data: progress } = await supabase.from("user_progress").select("*").eq("user_id", user.id).maybeSingle()
+  const [progressRes, achievementsRes] = await Promise.all([
+    supabase.from("user_progress").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase
+      .from("user_achievements")
+      .select("achievement_id, unlocked_at, achievements ( title, description )")
+      .eq("user_id", user.id),
+  ])
 
-  const { data: achievements } = await supabase
-    .from("user_achievements")
-    .select("achievement_id, unlocked_at, achievements ( title, description )")
-    .eq("user_id", user.id)
+  const progress = progressRes.data
+  const achievements = achievementsRes.data
 
   const lessonsCompleted = (progress?.lessons_completed as number | undefined) ?? 0
   const xp = (progress?.xp as number | undefined) ?? 0

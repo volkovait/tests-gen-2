@@ -1,7 +1,5 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { HOME_FEATURES, LABELS } from '@/lib/consts'
 import { Button } from '@/components/ui/button'
 import logoImg from '@/assets/logo.png'
@@ -16,24 +14,32 @@ const HOME_FEATURE_ICONS: Record<HomeFeatureKey, LucideIcon> = {
   feedback: Sparkles,
 }
 
-export default async function Home() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (user) {
-    redirect('/dashboard')
-  }
+/** Публичный лендинг: кэш на CDN/браузер, ревалидация без персональных данных в HTML. */
+export const revalidate = 300
 
+export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#EFE2BA] text-[#333333]">
-      <div className="lb-blob-gold pointer-events-none absolute -right-24 top-20 h-72 w-72 rounded-full blur-2xl md:h-96 md:w-96" aria-hidden />
-      <div className="lb-blob-terracotta pointer-events-none absolute -left-16 bottom-32 h-64 w-64 rounded-full blur-2xl md:h-80 md:w-80" aria-hidden />
+      <div
+        className="lb-blob-gold pointer-events-none absolute -right-24 top-20 h-72 w-72 rounded-full blur-xl md:h-96 md:w-96 md:blur-2xl"
+        aria-hidden
+      />
+      <div
+        className="lb-blob-terracotta pointer-events-none absolute -left-16 bottom-32 h-64 w-64 rounded-full blur-xl md:h-80 md:w-80 md:blur-2xl"
+        aria-hidden
+      />
 
-      <header className="relative border-b border-[#C5CBE3] bg-[#EFE2BA]/90 backdrop-blur-sm">
+      <header className="relative border-b border-[#C5CBE3] bg-[#EFE2BA]/95 max-md:backdrop-blur-none md:bg-[#EFE2BA]/90 md:backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <Image src={logoImg} alt={LABELS.BRAND_LOGO_ALT} width={80} height={80} className="rounded-lg" />
+            <Image
+              src={logoImg}
+              alt={LABELS.BRAND_LOGO_ALT}
+              width={80}
+              height={80}
+              sizes="80px"
+              className="rounded-lg"
+            />
             <span className="font-serif text-lg font-bold text-[#4056A1]">{LABELS.BRAND_NAME}</span>
           </Link>
           <div className="flex items-center gap-2">
