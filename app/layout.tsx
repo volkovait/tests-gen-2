@@ -4,10 +4,12 @@ import { Analytics } from '@vercel/analytics/next'
 import { LABELS } from '@/lib/consts'
 import './globals.css'
 
+/** Body: без link preload — меньше конкуренции с LCP (заголовки на Montserrat). */
 const openSans = Open_Sans({
   subsets: ['latin', 'cyrillic'],
   variable: '--font-open-sans',
   display: 'swap',
+  preload: false,
 })
 
 const montserrat = Montserrat({

@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
-import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
-import { createServerClient } from '@supabase/ssr'
 
 const protectedRoutes = [
   '/dashboard',
@@ -14,26 +12,36 @@ const protectedRoutes = [
   '/progress',
 ]
 
-export async function middleware(request: NextRequest) {
-  const response = await updateSession(request)
-  const { pathname } = request.nextUrl
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
-  if (isProtectedRoute) {
-    const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll() {},
-      },
-    })
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      const loginUrl = new URL('/auth/login', request.url)
-      loginUrl.searchParams.set('next', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
+function copyCookiesTo(from: NextResponse, to: NextResponse) {
+  for (const c of from.cookies.getAll()) {
+    to.cookies.set(c.name, c.value)
   }
+}
+
+export async function middleware(request: NextRequest) {
+  const { response, user } = await updateSession(request)
+
+  if (response.status >= 300 && response.status < 400) {
+    return response
+  }
+
+  const { pathname } = request.nextUrl
+
+  if (pathname === '/' && user) {
+    const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
+    copyCookiesTo(response, redirectResponse)
+    return redirectResponse
+  }
+
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  if (isProtectedRoute && !user) {
+    const loginUrl = new URL('/auth/login', request.url)
+    loginUrl.searchParams.set('next', pathname)
+    const redirectResponse = NextResponse.redirect(loginUrl)
+    copyCookiesTo(response, redirectResponse)
+    return redirectResponse
+  }
+
   return response
 }
 

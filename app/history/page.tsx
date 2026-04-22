@@ -48,24 +48,21 @@ export default async function HistoryPage() {
     redirect("/auth/login")
   }
 
-  const { data: lessons, error: lessonsError } = await supabase
-    .from("lessons")
-    .select("id, title, source_type, source_filename, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-
-  const lessonsList = lessonsError ? [] : lessons ?? []
-
-  const { data: tests } = await supabase
-    .from("tests")
-    .select("id, title, source_filename, question_count, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-
-  const { data: attempts } = await supabase
-    .from("test_attempts")
-    .select(
-      `
+  const [lessonsRes, testsRes, attemptsRes] = await Promise.all([
+    supabase
+      .from("lessons")
+      .select("id, title, source_type, source_filename, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("tests")
+      .select("id, title, source_filename, question_count, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("test_attempts")
+      .select(
+        `
       id,
       score,
       total_questions,
@@ -78,10 +75,15 @@ export default async function HistoryPage() {
         title
       )
     `,
-    )
-    .eq("user_id", user.id)
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false })
+      )
+      .eq("user_id", user.id)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false }),
+  ])
+
+  const lessonsList = lessonsRes.error ? [] : lessonsRes.data ?? []
+  const tests = testsRes.data
+  const attempts = attemptsRes.data
 
   return (
     <AppShell active="history">
