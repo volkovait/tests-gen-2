@@ -1,54 +1,55 @@
 import type { Metadata, Viewport } from 'next'
-import { Nunito, Playfair_Display } from 'next/font/google'
+import { Montserrat, Open_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { LABELS } from '@/lib/consts'
 import './globals.css'
 
-const nunito = Nunito({ 
-  subsets: ["latin"],
-  variable: '--font-nunito',
+const openSans = Open_Sans({
+  subsets: ['latin', 'cyrillic'],
+  variable: '--font-open-sans',
   display: 'swap',
 })
 
-const playfair = Playfair_Display({ 
-  subsets: ["latin"],
-  variable: '--font-playfair',
+const montserrat = Montserrat({
+  subsets: ['latin', 'cyrillic'],
+  variable: '--font-montserrat',
+  weight: ['600', '700'],
   display: 'swap',
 })
-
-const faviconUrl =
-  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo.png-9PRt6VvVg2J9Sj6NSGB2xb7NeKJH9W.webp'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Lingua Bloom - AI-Powered Test Generation',
-    template: '%s | Lingua Bloom',
+    default: LABELS.META_TITLE_DEFAULT,
+    template: LABELS.META_TITLE_TEMPLATE,
   },
-  description: 'Transform your PDFs into interactive tests and exercises with AI. Upload any document and generate comprehensive quizzes, flashcards, and study materials instantly.',
-  keywords: ['AI test generation', 'PDF to quiz', 'educational technology', 'study tools', 'exam preparation', 'learning platform'],
-  authors: [{ name: 'Lingua Bloom' }],
-  creator: 'Lingua Bloom',
+  description: LABELS.META_DESCRIPTION,
+  keywords: [
+    LABELS.META_KEYWORD_1,
+    LABELS.META_KEYWORD_2,
+    LABELS.META_KEYWORD_3,
+    LABELS.META_KEYWORD_4,
+    LABELS.META_KEYWORD_5,
+  ],
+  authors: [{ name: LABELS.META_AUTHOR_NAME }],
+  creator: LABELS.META_AUTHOR_NAME,
   openGraph: {
     type: 'website',
-    locale: 'en_US',
-    siteName: 'Lingua Bloom',
-    title: 'Lingua Bloom - AI-Powered Test Generation',
-    description: 'Transform your PDFs into interactive tests and exercises with AI.',
+    locale: 'ru_RU',
+    siteName: LABELS.META_KEYWORD_1,
+    title: LABELS.META_OG_TITLE,
+    description: LABELS.META_OG_DESCRIPTION,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Lingua Bloom - AI-Powered Test Generation',
-    description: 'Transform your PDFs into interactive tests and exercises with AI.',
-  },
-  icons: {
-    icon: [{ url: faviconUrl, type: 'image/webp' }],
-    apple: faviconUrl,
+    title: LABELS.META_TWITTER_TITLE,
+    description: LABELS.META_TWITTER_DESCRIPTION,
   },
 }
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F7C6D2' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1a1a' },
+    { media: '(prefers-color-scheme: light)', color: '#EFE2BA' },
+    { media: '(prefers-color-scheme: dark)', color: '#4056A1' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -60,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${nunito.variable} ${playfair.variable} bg-background`}>
+    <html lang="ru" className={`${openSans.variable} ${montserrat.variable} bg-background`}>
       <body className="font-sans antialiased min-h-screen">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

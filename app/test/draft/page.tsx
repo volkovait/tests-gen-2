@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import type { ComponentProps } from "react"
 import TestTakingClient from "../[id]/test-client"
+import { LABELS } from "@/lib/consts"
 
 type TestModel = ComponentProps<typeof TestTakingClient>["test"]
 
@@ -36,7 +37,7 @@ export default function DraftTestPage() {
   if (test === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
-        Loading…
+        {LABELS.DRAFT_LOADING}
       </div>
     )
   }
@@ -44,7 +45,7 @@ export default function DraftTestPage() {
   if (test === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
-        Redirecting…
+        {LABELS.DRAFT_REDIRECTING}
       </div>
     )
   }

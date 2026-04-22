@@ -1,61 +1,73 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
-import logoImg from "@/assets/logo.png"
+import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  Upload, 
-  History, 
-  Plus, 
-  FileText, 
-  Trophy, 
-  Target, 
+import {
+  History,
+  Plus,
+  FileText,
+  Trophy,
+  Target,
   Clock,
   ArrowRight,
   BookOpen,
-  LogOut
+  MessageCircle,
+  Sparkles,
 } from "lucide-react"
+import { LABELS } from "@/lib/consts"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) {
     redirect("/auth/login")
   }
 
-  // Get stats
-  const [testsResult, attemptsResult] = await Promise.all([
+  const [testsResult, attemptsResult, lessonsRes, lessonsCountRes, progressRes] = await Promise.all([
     supabase.from("tests").select("id", { count: "exact" }).eq("user_id", user.id),
-    supabase.from("test_attempts").select("id, score, total_questions, percentage", { count: "exact" }).eq("user_id", user.id)
+    supabase.from("test_attempts").select("id, score, total_questions, percentage", { count: "exact" }).eq("user_id", user.id),
+    supabase
+      .from("lessons")
+      .select("id, title, source_type, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(3),
+    supabase.from("lessons").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("user_progress").select("lessons_completed, xp").eq("user_id", user.id).maybeSingle(),
   ])
 
   const totalTests = testsResult.count || 0
   const totalAttempts = attemptsResult.count || 0
-  
+  const recentLessons = lessonsRes.error ? [] : lessonsRes.data ?? []
+  const totalLessons = lessonsCountRes.error ? recentLessons.length : lessonsCountRes.count ?? recentLessons.length
+  const lessonsCompleted = (progressRes.data?.lessons_completed as number | undefined) ?? 0
+  const xp = (progressRes.data?.xp as number | undefined) ?? 0
+
   let averageScore = 0
   if (attemptsResult.data && attemptsResult.data.length > 0) {
-    const scores = attemptsResult.data.filter(a => a.percentage !== null).map(a => Number(a.percentage))
+    const scores = attemptsResult.data.filter((a) => a.percentage !== null).map((a) => Number(a.percentage))
     if (scores.length > 0) {
       averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
     }
   }
 
-  // Get recent tests
   const { data: recentTests } = await supabase
     .from("tests")
     .select("id, title, source_filename, question_count, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(5)
+    .limit(4)
 
-  // Get recent attempts  
   const { data: recentAttempts } = await supabase
     .from("test_attempts")
-    .select(`
+    .select(
+      `
       id,
       score,
       total_questions,
@@ -65,194 +77,161 @@ export default async function DashboardPage() {
         id,
         title
       )
-    `)
+    `,
+    )
     .eq("user_id", user.id)
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false })
-    .limit(5)
+    .limit(4)
 
-  // Get profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user.id)
-    .single()
+  const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user.id).single()
 
-  const displayName = profile?.display_name || user.email?.split("@")[0] || "User"
+  const displayName = profile?.display_name || user.email?.split("@")[0] || LABELS.DEFAULT_STUDENT_NAME
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <Image
-              src={logoImg}
-              alt="Lingua Bloom Logo"
-              width={80}
-              height={80}
-              className="rounded-lg"
-            />
-            <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
-          </Link>
-          <nav className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/upload">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload
-              </Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/history">
-                <History className="h-4 w-4 mr-2" />
-                History
-              </Link>
-            </Button>
-            <form action="/auth/signout" method="post">
-              <Button variant="ghost" size="sm" type="submit">
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </form>
-          </nav>
-        </div>
-      </header>
-
+    <AppShell active="dashboard">
       <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-serif font-bold text-foreground mb-2">
-            Welcome back, {displayName}!
+          <h1 className="mb-2 font-serif text-3xl font-bold text-primary">
+            {LABELS.DASHBOARD_WELCOME_BACK.replace("{name}", displayName)}
           </h1>
-          <p className="text-muted-foreground">
-            Ready to continue your learning journey?
-          </p>
+          <p className="text-muted-foreground">{LABELS.DASHBOARD_SUBTITLE}</p>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:border-primary/40 transition-colors">
+        <div className="mb-8 grid gap-4 md:grid-cols-3">
+          <Card className="text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm border-[var(--lb-progress-track)] bg-card transition-shadow hover:shadow-xl">
             <CardContent className="p-6">
-              <Link href="/upload" className="flex items-center justify-between">
+              <Link href="/create" className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                    <Plus className="h-6 w-6 text-primary" />
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15">
+                    <MessageCircle className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-xl font-serif font-semibold text-foreground mb-1">
-                    Create New Test
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    Upload a PDF and generate questions
-                  </p>
+                  <h3 className="mb-1 font-serif text-lg font-semibold text-foreground">{LABELS.CHAT_WITH_AI}</h3>
+                  <p className="text-sm text-muted-foreground">{LABELS.DASHBOARD_CARD_CHAT_DESC}</p>
                 </div>
-                <ArrowRight className="h-6 w-6 text-primary" />
+                <ArrowRight className="h-6 w-6 shrink-0 text-primary" />
               </Link>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 hover:border-accent/40 transition-colors">
+          <Card className="text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm border-[var(--lb-progress-track)] bg-card transition-shadow hover:shadow-xl">
             <CardContent className="p-6">
-              <Link href="/history" className="flex items-center justify-between">
+              <Link href="/upload" className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
-                    <History className="h-6 w-6 text-accent" />
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--lb-gold)]/20">
+                    <Plus className="h-6 w-6 text-[var(--lb-gold)]" />
                   </div>
-                  <h3 className="text-xl font-serif font-semibold text-foreground mb-1">
-                    View History
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    Review past tests and results
+                  <h3 className="mb-1 font-serif text-lg font-semibold text-foreground">{LABELS.DASHBOARD_CARD_UPLOAD_TITLE}</h3>
+                  <p className="text-sm text-muted-foreground">{LABELS.DASHBOARD_CARD_UPLOAD_DESC}</p>
+                </div>
+                <ArrowRight className="h-6 w-6 shrink-0 text-primary" />
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[var(--lb-progress-track)] bg-card transition-shadow hover:shadow-xl">
+            <CardContent className="p-6">
+              <Link href="/progress" className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--lb-progress-track)]/60">
+                    <Sparkles className="h-6 w-6 text-[var(--lb-gold)]" />
+                  </div>
+                  <h3 className="mb-1 font-serif text-lg font-semibold text-foreground">{LABELS.DASHBOARD_CARD_PROGRESS_TITLE}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {LABELS.DASHBOARD_CARD_PROGRESS_STATS.replace("{xp}", String(xp)).replace("{count}", String(lessonsCompleted))}
                   </p>
                 </div>
-                <ArrowRight className="h-6 w-6 text-accent" />
+                <ArrowRight className="h-6 w-6 shrink-0 text-primary" />
               </Link>
             </CardContent>
           </Card>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="mb-8 grid gap-4 md:grid-cols-4">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{totalTests}</p>
-                  <p className="text-sm text-muted-foreground">Tests Created</p>
-                </div>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalLessons}</p>
+                <p className="text-sm text-muted-foreground">{LABELS.DASHBOARD_STAT_LESSONS_TOTAL}</p>
               </div>
             </CardContent>
           </Card>
-
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Target className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{totalAttempts}</p>
-                  <p className="text-sm text-muted-foreground">Tests Completed</p>
-                </div>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalTests}</p>
+                <p className="text-sm text-muted-foreground">{LABELS.DASHBOARD_STAT_TESTS_LEGACY}</p>
               </div>
             </CardContent>
           </Card>
-
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{averageScore}%</p>
-                  <p className="text-sm text-muted-foreground">Average Score</p>
-                </div>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/20">
+                <Target className="h-6 w-6 text-accent" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalAttempts}</p>
+                <p className="text-sm text-muted-foreground">{LABELS.DASHBOARD_STAT_TEST_ATTEMPTS}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--lb-success)]/15">
+                <Trophy className="h-6 w-6 text-[var(--lb-success)]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{averageScore}%</p>
+                <p className="text-sm text-muted-foreground">{LABELS.DASHBOARD_STAT_AVG_SCORE}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Recent Tests */}
+        <div className="grid gap-6 lg:grid-cols-2">
           <Card>
-            <CardHeader>
-              <CardTitle className="font-serif flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-                Recent Tests
-              </CardTitle>
-              <CardDescription>Your recently created tests</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="font-serif flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-[var(--lb-gold)]" />
+                  {LABELS.DASHBOARD_LESSONS_TITLE}
+                </CardTitle>
+                <CardDescription>{LABELS.DASHBOARD_LESSONS_DESC}</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/history">{LABELS.DASHBOARD_ALL_HISTORY}</Link>
+              </Button>
             </CardHeader>
             <CardContent>
-              {!recentTests || recentTests.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                  <p className="text-muted-foreground mb-4">No tests created yet</p>
-                  <Button asChild size="sm">
-                    <Link href="/upload">Create Your First Test</Link>
-                  </Button>
+              {recentLessons.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="mb-4 text-muted-foreground">{LABELS.DASHBOARD_LESSONS_EMPTY}</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button asChild size="sm">
+                      <Link href="/create">{LABELS.DASHBOARD_LESSONS_CHAT_SHORT}</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="secondary">
+                      <Link href="/upload">{LABELS.DASHBOARD_LESSONS_FILE_SHORT}</Link>
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentTests.map((test) => (
+                  {recentLessons.map((lesson) => (
                     <Link
-                      key={test.id}
-                      href={`/test/${test.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-card transition-colors"
+                      key={lesson.id}
+                      href={`/learn/${lesson.id}/view`}
+                      className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-card"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{test.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {test.question_count} questions
-                          </p>
-                        </div>
+                      <div>
+                        <p className="font-medium text-foreground">{lesson.title}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{lesson.source_type}</p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     </Link>
@@ -262,22 +241,20 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Attempts */}
           <Card>
             <CardHeader>
               <CardTitle className="font-serif flex items-center gap-2">
                 <Clock className="h-5 w-5 text-accent" />
-                Recent Results
+                {LABELS.DASHBOARD_TESTS_RECENT_TITLE}
               </CardTitle>
-              <CardDescription>Your latest test attempts</CardDescription>
+              <CardDescription>{LABELS.DASHBOARD_TESTS_RECENT_DESC}</CardDescription>
             </CardHeader>
             <CardContent>
               {!recentAttempts || recentAttempts.length === 0 ? (
-                <div className="text-center py-8">
-                  <Target className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                  <p className="text-muted-foreground mb-4">No attempts yet</p>
+                <div className="py-8 text-center text-muted-foreground">
+                  <p className="mb-3">{LABELS.DASHBOARD_TESTS_NO_ATTEMPTS}</p>
                   <Button asChild size="sm" variant="outline">
-                    <Link href="/upload">Take Your First Test</Link>
+                    <Link href="/upload">{LABELS.DASHBOARD_TO_TESTS}</Link>
                   </Button>
                 </div>
               ) : (
@@ -285,33 +262,27 @@ export default async function DashboardPage() {
                   {recentAttempts.map((attempt) => (
                     <Link
                       key={attempt.id}
-                      href={`/history/${attempt.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-card transition-colors"
+                      href={`/test/${(attempt.tests as unknown as { id: string })?.id ?? ""}`}
+                      className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-card"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          Number(attempt.percentage) >= 70 
-                            ? "bg-green-500/10" 
-                            : Number(attempt.percentage) >= 50 
-                              ? "bg-yellow-500/10" 
-                              : "bg-red-500/10"
-                        }`}>
-                          <span className={`text-sm font-bold ${
-                            Number(attempt.percentage) >= 70 
-                              ? "text-green-500" 
-                              : Number(attempt.percentage) >= 50 
-                                ? "text-yellow-500" 
-                                : "text-red-500"
-                          }`}>
-                            {Math.round(Number(attempt.percentage))}%
-                          </span>
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold ${
+                            Number(attempt.percentage) >= 70
+                              ? "bg-[var(--lb-success)]/15 text-[var(--lb-success)]"
+                              : Number(attempt.percentage) >= 50
+                                ? "bg-[var(--lb-gold)]/20 text-[var(--lb-gold)]"
+                                : "bg-destructive/10 text-destructive"
+                          }`}
+                        >
+                          {Math.round(Number(attempt.percentage))}%
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">
-                            {(attempt.tests as unknown as { title: string })?.title || "Unknown Test"}
-                          </p>
+                          <p className="font-medium">{(attempt.tests as unknown as { title: string })?.title || LABELS.TEST_FALLBACK_TITLE}</p>
                           <p className="text-xs text-muted-foreground">
-                            {attempt.score}/{attempt.total_questions} correct
+                            {LABELS.DASHBOARD_SCORE_CORRECT
+                              .replace("{score}", String(attempt.score))
+                              .replace("{total}", String(attempt.total_questions))}
                           </p>
                         </div>
                       </div>
@@ -323,7 +294,28 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {recentTests && recentTests.length > 0 ? (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="font-serif text-lg">{LABELS.DASHBOARD_TESTS_LEGACY_SECTION}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {recentTests.map((t) => (
+                <Button key={t.id} variant="outline" size="sm" asChild>
+                  <Link href={`/test/${t.id}`}>{t.title}</Link>
+                </Button>
+              ))}
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/history">
+                  <History className="mr-2 h-4 w-4" />
+                  {LABELS.HISTORY}
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
       </main>
-    </div>
+    </AppShell>
   )
 }

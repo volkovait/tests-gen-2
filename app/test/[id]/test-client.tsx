@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Home
 } from "lucide-react"
+import { LABELS } from "@/lib/consts"
 
 interface Question {
   id: string
@@ -185,17 +186,17 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
             <Link href="/upload" className="flex items-center gap-3">
               <Image
                 src={logoImg}
-                alt="Lingua Bloom"
+                alt={LABELS.TEST_BRAND_LOGO_ALT}
                 width={80}
                 height={80}
                 className="rounded-lg"
               />
-              <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
+              <span className="font-serif text-lg font-semibold text-foreground">{LABELS.TEST_BRAND_DISPLAY}</span>
             </Link>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/upload">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to upload
+                {LABELS.TEST_BACK_UPLOAD}
               </Link>
             </Button>
           </div>
@@ -206,24 +207,24 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-serif">{test.title}</CardTitle>
               <CardDescription>
-                {test.source_filename && `Based on: ${test.source_filename}`}
+                {test.source_filename && LABELS.TEST_BASED_ON.replace("{name}", test.source_filename)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg bg-primary/5 text-center">
                   <p className="text-3xl font-bold text-primary">{test.question_count}</p>
-                  <p className="text-sm text-muted-foreground">Questions</p>
+                  <p className="text-sm text-muted-foreground">{LABELS.TEST_QUESTIONS_LABEL}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-accent/5 text-center">
-                  <p className="text-3xl font-bold text-accent capitalize">{test.settings.difficulty || "Medium"}</p>
-                  <p className="text-sm text-muted-foreground">Difficulty</p>
+                  <p className="text-3xl font-bold text-accent capitalize">{test.settings.difficulty || LABELS.TEST_DIFFICULTY_MEDIUM}</p>
+                  <p className="text-sm text-muted-foreground">{LABELS.TEST_DIFFICULTY_LABEL}</p>
                 </div>
               </div>
 
               {test.settings.questionTypes && (
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-2">Question Types:</p>
+                  <p className="text-sm font-medium text-foreground mb-2">{LABELS.TEST_QUESTION_TYPES}</p>
                   <div className="flex flex-wrap gap-2">
                     {test.settings.questionTypes.map((type) => (
                       <span key={type} className="px-3 py-1 rounded-full bg-muted text-sm text-muted-foreground capitalize">
@@ -236,7 +237,7 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
 
               <Button onClick={handleStartTest} size="lg" className="w-full">
                 <Play className="h-5 w-5 mr-2" />
-                Start Test
+                {LABELS.TEST_START}
               </Button>
             </CardContent>
           </Card>
@@ -266,12 +267,12 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
             <Link href="/upload" className="flex items-center gap-3">
               <Image
                 src={logoImg}
-                alt="Lingua Bloom"
+                alt={LABELS.TEST_BRAND_LOGO_ALT}
                 width={80}
                 height={80}
                 className="rounded-lg"
               />
-              <span className="font-serif text-lg font-semibold text-foreground">Lingua Bloom</span>
+              <span className="font-serif text-lg font-semibold text-foreground">{LABELS.TEST_BRAND_DISPLAY}</span>
             </Link>
           </div>
         </header>
@@ -285,17 +286,19 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                   <Trophy className={`h-12 w-12 ${getScoreColor()}`} />
                 </div>
                 <h2 className="text-3xl font-serif font-bold text-foreground mb-2">
-                  Test Complete!
+                  {LABELS.TEST_COMPLETE_TITLE}
                 </h2>
                 <p className={`text-5xl font-bold ${getScoreColor()} mb-2`}>
                   {score.percentage}%
                 </p>
                 <p className="text-muted-foreground">
-                  You got {score.correct} out of {score.total} questions correct
+                  {LABELS.TEST_RESULTS_SCORE_LINE
+                    .replace("{correct}", String(score.correct))
+                    .replace("{total}", String(score.total))}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   <Clock className="h-4 w-4 inline mr-1" />
-                  Time: {formatTime(elapsedTime)}
+                  {LABELS.TEST_TIME_PREFIX}{formatTime(elapsedTime)}
                 </p>
               </div>
             </CardContent>
@@ -305,12 +308,12 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
           <div className="flex gap-4 mb-8">
             <Button onClick={handleRetake} variant="outline" className="flex-1">
               <RotateCcw className="h-4 w-4 mr-2" />
-              Retake Test
+              {LABELS.TEST_RETAKE}
             </Button>
             <Button asChild className="flex-1">
               <Link href="/upload">
                 <Home className="h-4 w-4 mr-2" />
-                New upload
+                {LABELS.TEST_NEW_UPLOAD}
               </Link>
             </Button>
           </div>
@@ -318,8 +321,8 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
           {/* Question Review */}
           <Card>
             <CardHeader>
-              <CardTitle className="font-serif">Question Review</CardTitle>
-              <CardDescription>Review your answers and learn from mistakes</CardDescription>
+              <CardTitle className="font-serif">{LABELS.TEST_REVIEW_TITLE}</CardTitle>
+              <CardDescription>{LABELS.TEST_REVIEW_DESC}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {test.questions.map((question, index) => {
@@ -337,7 +340,7 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm text-muted-foreground mb-1">Question {index + 1}</p>
+                        <p className="text-sm text-muted-foreground mb-1">{LABELS.TEST_QUESTION_NUMBER.replace("{n}", String(index + 1))}</p>
                         <p className="font-medium text-foreground">{question.question}</p>
                       </div>
                     </div>
@@ -365,14 +368,14 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                     {question.type === "true_false" && (
                       <div className="ml-9">
                         <p className="text-sm">
-                          <span className="text-muted-foreground">Your answer: </span>
+                          <span className="text-muted-foreground">{LABELS.TEST_YOUR_ANSWER}</span>
                           <span className={isCorrect ? "text-green-600" : "text-red-600"}>
-                            {answer?.answer?.toString() || "No answer"}
+                            {answer?.answer?.toString() || LABELS.TEST_NO_ANSWER}
                           </span>
                         </p>
                         {!isCorrect && (
                           <p className="text-sm">
-                            <span className="text-muted-foreground">Correct answer: </span>
+                            <span className="text-muted-foreground">{LABELS.TEST_CORRECT_ANSWER}</span>
                             <span className="text-green-600">{question.correctAnswer.toString()}</span>
                           </p>
                         )}
@@ -382,14 +385,14 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                     {question.type === "fill_blank" && (
                       <div className="ml-9">
                         <p className="text-sm">
-                          <span className="text-muted-foreground">Your answer: </span>
+                          <span className="text-muted-foreground">{LABELS.TEST_YOUR_ANSWER}</span>
                           <span className={isCorrect ? "text-green-600" : "text-red-600"}>
-                            {answer?.answer?.toString() || "No answer"}
+                            {answer?.answer?.toString() || LABELS.TEST_NO_ANSWER}
                           </span>
                         </p>
                         {!isCorrect && (
                           <p className="text-sm">
-                            <span className="text-muted-foreground">Correct answer: </span>
+                            <span className="text-muted-foreground">{LABELS.TEST_CORRECT_ANSWER}</span>
                             <span className="text-green-600">{question.correctAnswer.toString()}</span>
                           </p>
                         )}
@@ -399,7 +402,7 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                     {question.explanation && (
                       <div className="ml-9 mt-3 p-3 rounded bg-muted/50">
                         <p className="text-sm text-muted-foreground">
-                          <span className="font-medium">Explanation:</span> {question.explanation}
+                          <span className="font-medium">{LABELS.TEST_EXPLANATION}</span> {question.explanation}
                         </p>
                       </div>
                     )}
@@ -422,7 +425,7 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
           <div className="flex items-center gap-3">
             <Image
               src={logoImg}
-              alt="Lingua Bloom"
+              alt={LABELS.TEST_BRAND_LOGO_ALT}
               width={80}
               height={80}
               className="rounded-lg"
@@ -454,7 +457,7 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                 {currentQuestion.type.replace("_", " ")}
               </span>
               <span className="text-sm font-medium text-primary">
-                Question {currentQuestionIndex + 1}
+                {LABELS.TEST_QUESTION_INDEX.replace("{n}", String(currentQuestionIndex + 1))}
               </span>
             </div>
             <CardTitle className="text-xl font-serif leading-relaxed">
@@ -515,12 +518,12 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
             {/* Fill in the Blank */}
             {currentQuestion.type === "fill_blank" && (
               <div className="space-y-2">
-                <Label htmlFor="answer">Your Answer</Label>
+                <Label htmlFor="answer">{LABELS.TEST_YOUR_ANSWER_LABEL}</Label>
                 <Input
                   id="answer"
                   value={currentAnswer?.answer?.toString() || ""}
                   onChange={(e) => handleAnswer(e.target.value)}
-                  placeholder="Type your answer here..."
+                  placeholder={LABELS.TEST_ANSWER_PLACEHOLDER}
                   className="text-lg"
                 />
               </div>
@@ -535,7 +538,7 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                 className="flex-1"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Previous
+                {LABELS.TEST_PREVIOUS}
               </Button>
               
               {currentQuestionIndex === test.questions.length - 1 ? (
@@ -544,12 +547,12 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
                   disabled={isSubmitting}
                   className="flex-1"
                 >
-                  {isSubmitting ? "Submitting..." : "Submit Test"}
+                  {isSubmitting ? LABELS.TEST_SUBMITTING : LABELS.TEST_SUBMIT}
                   <CheckCircle2 className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
                 <Button onClick={handleNext} className="flex-1">
-                  Next
+                  {LABELS.TEST_NEXT}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               )}
@@ -559,7 +562,7 @@ export default function TestTakingClient({ test }: TestTakingClientProps) {
 
         {/* Question Navigator */}
         <div className="mt-6">
-          <p className="text-sm font-medium text-muted-foreground mb-3">Question Navigator</p>
+          <p className="text-sm font-medium text-muted-foreground mb-3">{LABELS.TEST_NAVIGATOR}</p>
           <div className="flex flex-wrap gap-2">
             {test.questions.map((_, index) => {
               const answered = answers[index]?.answer !== null

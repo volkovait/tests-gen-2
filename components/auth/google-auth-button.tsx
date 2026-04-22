@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { signInWithGoogle } from "@/lib/auth/sign-in-with-google"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { LABELS } from "@/lib/consts"
 
 function GoogleMark({ className }: { className?: string }) {
   return (
@@ -37,7 +38,7 @@ type GoogleAuthButtonProps = {
 
 export function GoogleAuthButton({
   nextPath = "/dashboard",
-  label = "Continue with Google",
+  label = LABELS.AUTH_GOOGLE_CONTINUE,
 }: GoogleAuthButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

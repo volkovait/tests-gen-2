@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { LABELS } from '@/lib/consts'
 
 export default async function Page({
   searchParams,
@@ -14,17 +15,17 @@ export default async function Page({
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                Sorry, something went wrong.
+                {LABELS.AUTH_ERROR_TITLE}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {params?.error ? (
                 <p className="text-sm text-muted-foreground">
-                  Code error: {params.error}
+                  {LABELS.AUTH_ERROR_CODE_PREFIX}{params.error}
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  An unspecified error occurred.
+                  {LABELS.AUTH_ERROR_UNSPECIFIED}
                 </p>
               )}
             </CardContent>
