@@ -10,6 +10,8 @@ export const lessonMetaSchema = z.object({
 export const generateInteractiveChatBodySchema = z.object({
   source: z.literal('chat'),
   title: z.string().max(200).optional(),
+  /** Свободный текст с эталонными ответами; опционально. */
+  correctAnswersHint: z.string().max(16_000).optional(),
   messages: z
     .array(
       z.object({

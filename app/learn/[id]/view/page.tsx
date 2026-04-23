@@ -30,7 +30,6 @@ export default async function LearnViewPage({ params }: { params: Promise<{ id: 
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border-2 border-[#C5CBE3] bg-white px-4 py-4 shadow-sm">
             <div>
               <h1 className="font-serif text-2xl font-bold text-[#4056A1] md:text-3xl">{lesson.title}</h1>
-              <p className="mt-1 text-sm text-[#333333]/80">{LABELS.LEARN_VIEW_SUBTITLE}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" asChild className="border-2 border-[#4056A1] text-[#4056A1]">

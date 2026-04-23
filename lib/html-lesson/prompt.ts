@@ -1,4 +1,7 @@
-/** System prompt for one-shot interactive HTML test generation (en-test rules + repo delivery constraints). */
+/**
+ * Исторический промпт: монолитный HTML+JS одним ответом модели.
+ * Текущая генерация тестов: JSON-спека + [`lesson-spec-prompt`](./lesson-spec-prompt.ts) + [`public/lesson-runtime.js`](../../public/lesson-runtime.js).
+ */
 export const HTML_LESSON_SYSTEM = `Проанализируй материал, который пришлёт пользователь (текст из PDF или переписки). Твоя задача — на его основе создать интерактивный веб-тест для студентов.
 
 Верни ОДИН полный HTML5-документ: от <!DOCTYPE html> до </html>. Без markdown-обёртки и без текста до или после документа.
@@ -9,7 +12,7 @@ export const HTML_LESSON_SYSTEM = `Проанализируй материал, 
 - Google Fonts подключай ТОЛЬКО так: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=...&display=swap">. НИКОГДА не используй <script src="..."> для CSS или шрифтов (в том числе не используй ajax.googleapis.com и любые «webfont loader»-скрипты).
 - Не полагайся на отправку HTML-формы: у всех кнопок проверки/следующего вопроса/завершения ставь type="button". Логику вешай на addEventListener('click', ...) или onclick, без action/method у формы или с пустой формой только для разметки.
 - Аудио: не задавай относительные пути к .mp3 на «том же URL», что и документ (их нет на сервере). Либо не задавай src (пустой), либо data: URL короткой тишины, либо только текст «аудио будет здесь» — без обязательной загрузки файла.
-- Один основной <script> в конце body БЕЗ type="module". Отправку в Telegram делай только через POST на относительный путь /api/lesson-send-telegram (тот же origin, что и страница урока), см. раздел 4 — не вызывай api.telegram.org из браузера (CORS).
+- Один основной <script> в конце body БЕЗ type="module". Отправку в Telegram делай только через POST на относительный путь /api/lesson-send-telegram (тот же origin, что и страница теста), см. раздел 4 — не вызывай api.telegram.org из браузера (CORS).
 - Строки в JS с апострофом внутри (isn't, don't, it's, l'autre): НЕ обрамляй их одинарными кавычками — это ломает парсер (SyntaxError: Unexpected identifier 't'). Правильно: "isn't" или \`isn't\` или 'isn\\'t'. Неверно: 'isn't'.
 - После построения DOM: инициализируй обработчики внутри DOMContentLoaded (или ставь <script> в самом конце body после всех элементов) и перед доступом к узлу проверяй if (!el) return; чтобы не было «Cannot set properties of null».
 

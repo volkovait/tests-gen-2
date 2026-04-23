@@ -8,14 +8,14 @@ export function lessonModelLogRoot(): string {
   return join(process.cwd(), REL_ROOT)
 }
 
-/** Папка для одной сессии генерации урока (до появления `lessonId` — префикс `pending-`). */
+/** Папка для одной сессии генерации теста (до появления `lessonId` — префикс `pending-`). */
 export async function createPendingLessonLogDir(): Promise<string> {
   const dir = join(lessonModelLogRoot(), `pending-${randomUUID()}`)
   await mkdir(dir, { recursive: true })
   return dir
 }
 
-/** После сохранения урока переименовываем папку в id урока. */
+/** После сохранения теста переименовываем папку в id теста. */
 export async function finalizeLessonLogDir(pendingDir: string, lessonId: string): Promise<void> {
   const target = join(lessonModelLogRoot(), lessonId)
   try {
@@ -25,7 +25,7 @@ export async function finalizeLessonLogDir(pendingDir: string, lessonId: string)
   }
 }
 
-/** Одна папка на запрос ассистента чата (без привязки к уроку в БД). */
+/** Одна папка на запрос ассистента чата (без привязки к тесту в БД). */
 export async function createAssistantRequestLogDir(): Promise<string> {
   const dir = join(lessonModelLogRoot(), `assistant-${randomUUID()}`)
   await mkdir(dir, { recursive: true })

@@ -10,7 +10,7 @@ export function extractHtmlDocument(raw: string): string {
     s = fence[1].trim()
   }
   if (!/<html[\s>]/i.test(s) && /<body[\s>]/i.test(s)) {
-    s = `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Урок</title></head>${s}</html>`
+    s = `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>тест</title></head>${s}</html>`
   }
   const enc = new TextEncoder().encode(s)
   if (enc.length > MAX_HTML_BYTES) {

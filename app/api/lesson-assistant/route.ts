@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server'
 export const runtime = 'nodejs'
 export const maxDuration = 120
 
-const ASSISTANT_SYSTEM = `Ты — дружелюбный ассистент Lingua-Bloom по созданию языковых уроков.
+const ASSISTANT_SYSTEM = `Ты — дружелюбный ассистент Lingua-Bloom по созданию языковых тестов.
 Помоги пользователю уточнить тему, уровень (A1–C2), целевой язык и формат заданий. Отвечай по-русски, кратко (2–5 предложений или немного пунктов). Не генерируй HTML — только диалог.`
 
 export async function POST(request: Request) {
