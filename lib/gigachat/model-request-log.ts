@@ -4,12 +4,18 @@ import { randomUUID } from 'node:crypto'
 
 const REL_ROOT = join('logs', 'lesson-model-requests')
 
+/** В проде ФС часто только для чтения (Vercel, Docker) — не пишем в `logs/`. */
+export function isLessonModelFileLogEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production'
+}
+
 export function lessonModelLogRoot(): string {
   return join(process.cwd(), REL_ROOT)
 }
 
 /** Папка для одной сессии генерации теста (до появления `lessonId` — префикс `pending-`). */
-export async function createPendingLessonLogDir(): Promise<string> {
+export async function createPendingLessonLogDir(): Promise<string | null> {
+  if (!isLessonModelFileLogEnabled()) return null
   const dir = join(lessonModelLogRoot(), `pending-${randomUUID()}`)
   await mkdir(dir, { recursive: true })
   return dir
@@ -17,6 +23,7 @@ export async function createPendingLessonLogDir(): Promise<string> {
 
 /** После сохранения теста переименовываем папку в id теста. */
 export async function finalizeLessonLogDir(pendingDir: string, lessonId: string): Promise<void> {
+  if (!pendingDir || !isLessonModelFileLogEnabled()) return
   const target = join(lessonModelLogRoot(), lessonId)
   try {
     await rename(pendingDir, target)
@@ -26,7 +33,8 @@ export async function finalizeLessonLogDir(pendingDir: string, lessonId: string)
 }
 
 /** Одна папка на запрос ассистента чата (без привязки к тесту в БД). */
-export async function createAssistantRequestLogDir(): Promise<string> {
+export async function createAssistantRequestLogDir(): Promise<string | null> {
+  if (!isLessonModelFileLogEnabled()) return null
   const dir = join(lessonModelLogRoot(), `assistant-${randomUUID()}`)
   await mkdir(dir, { recursive: true })
   return dir
@@ -47,6 +55,7 @@ export async function writeModelCallLogFile(
   fileBase: string,
   payload: ModelCallLogPayload,
 ): Promise<void> {
+  if (!isLessonModelFileLogEnabled() || !outputDir) return
   await mkdir(outputDir, { recursive: true })
   const responseSnippet =
     payload.rawResponseBody !== undefined
@@ -77,6 +86,7 @@ export async function writeModelCallLogFile(
 
 /** Ошибка пайплайна генерации (после логов вызовов модели или вместо них). */
 export async function writeLessonFlowErrorLog(logDir: string, reason: unknown): Promise<void> {
+  if (!isLessonModelFileLogEnabled() || !logDir) return
   const msg =
     reason instanceof Error ? `${reason.message}\n${reason.stack ?? ''}`.trim() : String(reason)
   try {

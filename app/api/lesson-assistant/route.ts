@@ -31,7 +31,9 @@ export async function POST(request: Request) {
     const reply = await gigachatChatCompletion(messages, {
       temperature: 0.7,
       maxTokens: 1024,
-      log: { outputDir: assistantLogDir, fileBase: 'assistant-chat' },
+      ...(assistantLogDir
+        ? { log: { outputDir: assistantLogDir, fileBase: 'assistant-chat' as const } }
+        : {}),
     })
     return NextResponse.json({ message: reply })
   } catch (e) {

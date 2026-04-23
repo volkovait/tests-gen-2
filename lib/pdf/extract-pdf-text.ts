@@ -1,3 +1,4 @@
+import '@/lib/pdf/install-pdf-node-globals'
 import { PDFParse } from 'pdf-parse'
 
 const DEFAULT_MAX_CHARS = 48_000

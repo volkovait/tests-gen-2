@@ -38,10 +38,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const ensureLessonLogDir = async (): Promise<string> => {
-      if (lessonLogDir === null) {
-        lessonLogDir = await createPendingLessonLogDir()
-      }
+    const ensureLessonLogDir = async (): Promise<string | undefined> => {
+      if (lessonLogDir !== null) return lessonLogDir
+      const dir = await createPendingLessonLogDir()
+      if (dir === null) return undefined
+      lessonLogDir = dir
       return lessonLogDir
     }
 
