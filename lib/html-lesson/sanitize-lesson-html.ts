@@ -1,7 +1,7 @@
 const STRIP_BOT_TOKEN_DECL = /\b(?:const|let|var)\s+botToken\s*=\s*['"][^'"]*['"]\s*;?/g
 const STRIP_CHAT_ID_DECL = /\b(?:const|let|var)\s+chatId\s*=\s*(?:['"][^'"]*['"]|\d+)\s*;?/g
 
-/** Убирает объявления токена из HTML урока: отправка только через серверный прокси. */
+/** Убирает объявления токена из HTML теста: отправка только через серверный прокси. */
 function stripTelegramClientSecrets(html: string): string {
   return html.replace(STRIP_BOT_TOKEN_DECL, '').replace(STRIP_CHAT_ID_DECL, '')
 }

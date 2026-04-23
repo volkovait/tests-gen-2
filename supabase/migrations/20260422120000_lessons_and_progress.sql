@@ -100,7 +100,7 @@ create policy "user_achievements_insert_own" on public.user_achievements for ins
 
 insert into public.achievements (id, title, description, threshold_xp)
 values
-  ('first_lesson', 'Первый росток', 'Создан первый интерактивный урок', 0),
+  ('first_lesson', 'Первый росток', 'Создан первый интерактивный тест', 0),
   ('explorer', 'Исследователь', 'Набрано 100 XP', 100)
 on conflict (id) do nothing;
 

@@ -11,7 +11,7 @@ const bodySchema = z.object({
   payload: z.record(z.string(), z.unknown()).optional(),
 })
 
-/** Сохраняет попытку прохождения урока (данные могут приходить из сгенерированной страницы через ваш клиент). */
+/** Сохраняет попытку прохождения теста (данные могут приходить из сгенерированной страницы через ваш клиент). */
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()

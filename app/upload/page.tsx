@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { AppShell } from "@/components/app-shell"
 import { LABELS } from "@/lib/consts"
 import {
@@ -32,6 +33,7 @@ export default function UploadPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [title, setTitle] = useState("")
+  const [correctAnswersHint, setCorrectAnswersHint] = useState("")
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const f = acceptedFiles[0]
@@ -77,16 +79,29 @@ export default function UploadPage() {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("title", title || file.name.replace(/\.[^.]+$/, ""))
+      const answers = correctAnswersHint.trim()
+      if (answers) formData.append("correctAnswersHint", answers)
 
       const response = await fetch("/api/generate-interactive-page", {
         method: "POST",
         body: formData,
       })
-      const data = (await response.json()) as { error?: string; lessonId?: string; viewUrl?: string }
+      const data = (await response.json()) as {
+        error?: string
+        lessonId?: string
+        viewUrl?: string
+        validationWarnings?: string[]
+      }
       if (!response.ok) {
         throw new Error(data.error || LABELS.UPLOAD_ERROR_GENERATION)
       }
       if (data.lessonId) {
+        const warns = Array.isArray(data.validationWarnings) ? data.validationWarnings : []
+        if (warns.length > 0 && typeof window !== "undefined") {
+          window.alert(
+            `${LABELS.LESSON_PARTIAL_VALIDATION_ALERT_TITLE}\n\n${LABELS.LESSON_PARTIAL_VALIDATION_ALERT_INTRO}\n\n${warns.join("\n\n")}`,
+          )
+        }
         router.push(data.viewUrl || `/learn/${data.lessonId}/view`)
       }
     } catch (err) {
@@ -206,6 +221,21 @@ export default function UploadPage() {
               <div className="space-y-2">
                 <Label htmlFor="title">{LABELS.UPLOAD_LABEL_TITLE}</Label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={LABELS.UPLOAD_TITLE_PLACEHOLDER} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="correct-answers-hint" className="text-muted-foreground">
+                  {LABELS.UPLOAD_CORRECT_ANSWERS_LABEL}{" "}
+                  <span className="font-normal">({LABELS.UPLOAD_CORRECT_ANSWERS_OPTIONAL})</span>
+                </Label>
+                <Textarea
+                  id="correct-answers-hint"
+                  value={correctAnswersHint}
+                  onChange={(e) => setCorrectAnswersHint(e.target.value)}
+                  placeholder={LABELS.UPLOAD_CORRECT_ANSWERS_PLACEHOLDER}
+                  rows={3}
+                  maxLength={16_000}
+                  className="min-h-[72px] resize-y"
+                />
               </div>
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" className="flex-1" onClick={() => setStep("upload")}>

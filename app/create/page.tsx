@@ -23,6 +23,7 @@ export default function CreateLessonPage() {
   const router = useRouter()
   const [messages, setMessages] = useState<Msg[]>([])
   const [lessonTitle, setLessonTitle] = useState("")
+  const [correctAnswersHint, setCorrectAnswersHint] = useState("")
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [genLoading, setGenLoading] = useState(false)
@@ -75,6 +76,7 @@ export default function CreateLessonPage() {
         content: x.content,
       }))
       const trimmedTitle = lessonTitle.trim()
+      const trimmedAnswers = correctAnswersHint.trim()
       const res = await fetch("/api/generate-interactive-page", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -82,11 +84,23 @@ export default function CreateLessonPage() {
           source: "chat",
           messages: apiMessages,
           ...(trimmedTitle ? { title: trimmedTitle } : {}),
+          ...(trimmedAnswers ? { correctAnswersHint: trimmedAnswers } : {}),
         }),
       })
-      const data = (await res.json()) as { error?: string; lessonId?: string; viewUrl?: string }
+      const data = (await res.json()) as {
+        error?: string
+        lessonId?: string
+        viewUrl?: string
+        validationWarnings?: string[]
+      }
       if (!res.ok) throw new Error(data.error || LABELS.CREATE_ERROR_GENERATION)
       if (data.lessonId) {
+        const warns = Array.isArray(data.validationWarnings) ? data.validationWarnings : []
+        if (warns.length > 0 && typeof window !== "undefined") {
+          window.alert(
+            `${LABELS.LESSON_PARTIAL_VALIDATION_ALERT_TITLE}\n\n${LABELS.LESSON_PARTIAL_VALIDATION_ALERT_INTRO}\n\n${warns.join("\n\n")}`,
+          )
+        }
         router.push(data.viewUrl || `/learn/${data.lessonId}/view`)
       }
     } catch (e) {
@@ -114,7 +128,7 @@ export default function CreateLessonPage() {
         {error && <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 
         <Card>
-          <CardContent className="flex max-h-[min(60vh,520px)] flex-col gap-3 p-4">
+          <CardContent className="flex min-h-0 max-h-[min(60vh,520px)] flex-col gap-3 overflow-hidden p-4">
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
               {messages.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{LABELS.CREATE_HINT_EXAMPLE}</p>
@@ -137,9 +151,9 @@ export default function CreateLessonPage() {
               <div ref={bottomRef} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lesson-title" className="text-muted-foreground">
-                {LABELS.CREATE_LESSON_TITLE_LABEL}{" "}
-                <span className="font-normal">({LABELS.CREATE_LESSON_TITLE_OPTIONAL})</span>
+              <Label htmlFor="lesson-title" className="text-muted-foreground block">
+                <div className="block">{LABELS.CREATE_LESSON_TITLE_LABEL}</div>
+                <div className="text-[10px]/8 block">({LABELS.CREATE_LESSON_TITLE_OPTIONAL})</div>
               </Label>
               <Input
                 id="lesson-title"
@@ -149,13 +163,14 @@ export default function CreateLessonPage() {
                 maxLength={200}
               />
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+          
+            <div className="flex min-h-0 flex-col gap-2 sm:flex-row sm:items-stretch">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={LABELS.CREATE_PLACEHOLDER_MESSAGE}
                 rows={2}
-                className="min-h-[72px] flex-1 resize-none"
+                className="field-sizing-fixed max-h-[min(28vh,220px)] min-h-[72px] min-w-0 flex-1 resize-none overflow-y-auto overflow-x-hidden break-words"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault()
@@ -168,6 +183,23 @@ export default function CreateLessonPage() {
                 {LABELS.CREATE_SEND}
               </Button>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="correct-answers-hint" className="text-muted-foreground block">
+                <div className="block">{LABELS.CREATE_CORRECT_ANSWERS_LABEL}</div>
+                <div className="text-[10px]/8 block">({LABELS.CREATE_CORRECT_ANSWERS_OPTIONAL})</div>
+              </Label>
+              <Textarea
+                id="correct-answers-hint"
+                value={correctAnswersHint}
+                onChange={(e) => setCorrectAnswersHint(e.target.value)}
+                placeholder={LABELS.CREATE_CORRECT_ANSWERS_PLACEHOLDER}
+                rows={3}
+                maxLength={16_000}
+                className="min-h-[72px] resize-y"
+              />
+            </div>
+
             <Button
               type="button"
               variant="secondary"

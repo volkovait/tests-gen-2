@@ -20,10 +20,10 @@ function imagePlaceholderText(fileName: string): string {
     'Пользователь загрузил изображение учебного материала.',
     `Имя файла: ${fileName}.`,
     'Содержимое изображения в этом контуре не распознано автоматически.',
-    'Сгенерируй обобщённый, но полезный языковой урок (лексика + грамматика + упражнения),',
+    'Сгенерируй обобщённый, но полезный языковой тест (лексика + грамматика + упражнения),',
     'который подойдёт как шаблон после уточнения темы пользователем в чате.',
     'Используй нейтральную тему вроде «повторение времени Present Simple» или «лексика путешествий»,',
-    'и явно напиши в уроке короткий блок: «Если ваш материал о другой теме — обсудите это в чате и создайте урок заново».',
+    'и явно напиши в тесте короткий блок: «Если ваш материал о другой теме — обсудите это в чате и создайте тест заново».',
   ].join(' ')
 }
 
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
     let sourceType: 'pdf' | 'image' | 'chat'
     let sourceFilename: string | null
     let materialSummary: string
+    let correctAnswersHint: string | undefined
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
@@ -60,6 +61,11 @@ export async function POST(request: Request) {
       }
       title = (formData.get('title') as string)?.trim() || file.name.replace(/\.[^.]+$/, '') || LABELS.DEFAULT_LESSON_TITLE
       sourceFilename = file.name
+      const hintField = formData.get('correctAnswersHint')
+      if (typeof hintField === 'string') {
+        const t = hintField.trim()
+        if (t.length > 0) correctAnswersHint = t.slice(0, 16_000)
+      }
 
       const buf = await file.arrayBuffer()
       if (file.type === 'application/pdf') {
@@ -89,11 +95,14 @@ export async function POST(request: Request) {
             logDir: await ensureLessonLogDir(),
           })
       materialSummary = parsed.data.messages.map((m) => `${m.role}: ${m.content}`).join('\n\n')
+      const h = parsed.data.correctAnswersHint?.trim()
+      if (h && h.length > 0) correctAnswersHint = h.slice(0, 16_000)
     }
 
-    const html = await generateInteractiveHtmlLesson({
+    const { html, validationWarnings } = await generateInteractiveHtmlLesson({
       title,
       materialSummary,
+      ...(correctAnswersHint ? { correctAnswersHint } : {}),
       logDir: await ensureLessonLogDir(),
     })
     const lessonId = await saveLessonRow(supabase, user.id, {
@@ -101,7 +110,11 @@ export async function POST(request: Request) {
       sourceType,
       sourceFilename,
       htmlBody: html,
-      meta: { generatedAt: new Date().toISOString() },
+      meta: {
+        generatedAt: new Date().toISOString(),
+        lessonEngine: 'spec-v1',
+        ...(validationWarnings.length > 0 ? { validationWarnings } : {}),
+      },
     })
 
     if (lessonLogDir) {
@@ -113,6 +126,7 @@ export async function POST(request: Request) {
       lessonId,
       viewUrl: `/learn/${lessonId}/view`,
       documentUrl: `/learn/${lessonId}/document`,
+      validationWarnings,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Server error'
