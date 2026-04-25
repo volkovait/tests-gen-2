@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
+import { TelegramSitePingButton } from "@/components/telegram-site-ping-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -121,6 +122,19 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-muted-foreground">{LABELS.DASHBOARD_SUBTITLE}</p>
         </div>
+
+        <Card className="mb-8 border-dashed">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-serif text-base">Проверка Telegram</CardTitle>
+            <CardDescription>
+              Нажмите, чтобы сервер отправил в ваш чат слово «Привет». Так проверяется тот же путь, что и у интерактивных
+              уроков (в т.ч. ошибка 503 при недоступности api.telegram.org).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <TelegramSitePingButton variant="dashboard" />
+          </CardContent>
+        </Card>
 
         <div className="mb-8 grid gap-4 md:grid-cols-3">
           <Card className="text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm border-[var(--lb-progress-track)] bg-card transition-shadow hover:shadow-xl">
