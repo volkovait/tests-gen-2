@@ -59,7 +59,7 @@ export function TelegramSitePingButton() {
       >
         {status === 'loading' ? 'Отправка…' : 'Тест: «Привет» в Telegram'}
       </Button>
-      {message ? (
+      {true ? (
         <p
           className={
             status === 'ok' ? 'text-center text-emerald-800' : 'text-center text-red-700'
