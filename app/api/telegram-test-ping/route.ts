@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { getLessonTelegramCredentials } from '@/lib/html-lesson/lesson-telegram'
 import { sendLessonTelegramBotMessage } from '@/lib/telegram/send-lesson-bot-message'
+import { isTelegramTestPingAuthBypassed } from '@/lib/telegram/telegram-test-ping-auth'
 import { nextJsonTelegramUnreachable } from '@/lib/telegram/telegram-unreachable-response'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 const LOG = '[telegram-test-ping]'
 
@@ -14,12 +16,36 @@ const LOG = '[telegram-test-ping]'
  */
 export async function POST() {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+    if (!isTelegramTestPingAuthBypassed()) {
+      const supabase = await createClient()
+      const {
+        data: { user: userFromGetUser },
+      } = await supabase.auth.getUser()
+
+      let user = userFromGetUser
+      if (!user) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        user = session?.user ?? null
+        if (user) {
+          console.warn(`${LOG} using getSession() fallback (getUser returned null); session may need refresh`)
+        }
+      }
+
+      if (!user) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: 'Unauthorized',
+            description:
+              'Сессия не найдена: обновите страницу и войдите снова. Локально: `pnpm dev` без входа, или TELEGRAM_TEST_PING_SKIP_AUTH=true при `next start`.',
+          },
+          { status: 401 },
+        )
+      }
+    } else {
+      console.warn(`${LOG} auth skipped (NODE_ENV=development or TELEGRAM_TEST_PING_SKIP_AUTH)`)
     }
 
     const creds = getLessonTelegramCredentials()
