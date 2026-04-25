@@ -10,6 +10,11 @@ let cachedKey: string | undefined
 /**
  * Ключ кэша диспетчера: при смене env в рантайме (тесты) пересоздаём.
  */
+/** Задан ли URL прокси для исходящих запросов к Telegram (или общий HTTPS_PROXY). */
+export function telegramProxyEnvIsSet(): boolean {
+  return proxyConfigKey() !== null
+}
+
 function proxyConfigKey(): string | null {
   const telegramOnly = process.env.TELEGRAM_HTTPS_PROXY?.trim() ?? ''
   if (telegramOnly) return `telegram:${telegramOnly}`
