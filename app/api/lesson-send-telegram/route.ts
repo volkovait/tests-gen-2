@@ -1,10 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { getLessonTelegramCredentials } from '@/lib/html-lesson/lesson-telegram'
+import { telegramUndiciFetch } from '@/lib/telegram/telegram-fetch'
 import { stripHtmlForTelegramPlain } from '@/lib/telegram/strip-html-for-plain'
+import { setDefaultResultOrder } from 'node:dns'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
+
+/** Снижает частые «fetch failed» в serverless: попытка IPv6 к внешним API может обрываться, IPv4 — работает. */
+setDefaultResultOrder('ipv4first')
 
 const bodySchema = z.object({
   parts: z.array(z.string().min(1).max(4096)).min(1).max(40),
@@ -14,30 +19,69 @@ const bodySchema = z.object({
 type TelegramApiResponse = { ok?: boolean; description?: string }
 
 const TELEGRAM_MAX = 4096
+const TELEGRAM_FETCH_TIMEOUT_MS = 25_000
+
+type SendMessageResult =
+  | { outcome: 'success' }
+  | { outcome: 'telegram_api_error'; description: string; httpStatus: number }
+  | { outcome: 'network_error'; description: string }
+
+function formatErrorChain(e: unknown): string {
+  if (!(e instanceof Error)) return String(e)
+  const parts: string[] = [e.message]
+  let depth = 0
+  let c: unknown = e.cause
+  while (c instanceof Error && depth < 6) {
+    parts.push(c.message)
+    c = c.cause
+    depth += 1
+  }
+  return parts.join(' — ')
+}
 
 async function sendTelegramMessage(params: {
   botToken: string
   chatId: string
   text: string
   parse_mode?: 'HTML'
-}): Promise<{ ok: true } | { ok: false; description: string; status: number }> {
+}): Promise<SendMessageResult> {
   const url = `https://api.telegram.org/bot${params.botToken}/sendMessage`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: params.chatId,
-      text: params.text,
-      ...(params.parse_mode ? { parse_mode: params.parse_mode } : {}),
-      disable_web_page_preview: true,
-    }),
-  })
-  const data = (await res.json().catch(() => null)) as TelegramApiResponse | null
-  if (!res.ok || !data || data.ok !== true) {
-    const desc = data?.description ?? res.statusText
-    return { ok: false, description: desc, status: res.status }
+  try {
+    const res = await telegramUndiciFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: params.chatId,
+        text: params.text,
+        ...(params.parse_mode ? { parse_mode: params.parse_mode } : {}),
+        disable_web_page_preview: true,
+      }),
+      signal: AbortSignal.timeout(TELEGRAM_FETCH_TIMEOUT_MS),
+    })
+    const data = (await res.json().catch(() => null)) as TelegramApiResponse | null
+    if (!res.ok || !data || data.ok !== true) {
+      const desc = data?.description ?? res.statusText
+      return { outcome: 'telegram_api_error', description: desc, httpStatus: res.status }
+    }
+    return { outcome: 'success' }
+  } catch (e) {
+    const description = formatErrorChain(e)
+    console.error('[lesson-send-telegram] sendMessage fetch failed', description)
+    return { outcome: 'network_error', description }
   }
-  return { ok: true }
+}
+
+function jsonTelegramUnreachable(logDetail: string) {
+  console.error('[lesson-send-telegram] unreachable', logDetail)
+  return NextResponse.json(
+    {
+      ok: false,
+      error: 'telegram_unreachable',
+      description:
+        'Не удалось связаться с api.telegram.org (Bot API по HTTPS, не MTProto). Если прямой доступ с сервера заблокирован, задайте TELEGRAM_HTTPS_PROXY или стандартные HTTPS_PROXY/HTTP_PROXY и перезапустите приложение.',
+    },
+    { status: 503 },
+  )
 }
 
 /** Прокси sendMessage: токен только на сервере, из iframe нет CORS к api.telegram.org. */
@@ -73,13 +117,21 @@ export async function POST(request: Request) {
         parse_mode: parse_mode === 'HTML' ? 'HTML' : undefined,
       })
 
-      if (withHtml.ok) {
+      if (withHtml.outcome === 'success') {
         continue
+      }
+
+      if (withHtml.outcome === 'network_error') {
+        return jsonTelegramUnreachable(`part ${i} HTML: ${withHtml.description}`)
       }
 
       console.error(
         '[lesson-send-telegram] HTML send failed',
-        JSON.stringify({ partIndex: i, description: withHtml.description, httpStatus: withHtml.status }),
+        JSON.stringify({
+          partIndex: i,
+          description: withHtml.description,
+          httpStatus: withHtml.httpStatus,
+        }),
       )
 
       const plain = stripHtmlForTelegramPlain(part).slice(0, TELEGRAM_MAX)
@@ -101,7 +153,11 @@ export async function POST(request: Request) {
         text: plain,
       })
 
-      if (!plainResult.ok) {
+      if (plainResult.outcome === 'network_error') {
+        return jsonTelegramUnreachable(`part ${i} plain: ${plainResult.description}`)
+      }
+
+      if (plainResult.outcome !== 'success') {
         console.error(
           '[lesson-send-telegram] plain fallback failed',
           JSON.stringify({ partIndex: i, description: plainResult.description }),
