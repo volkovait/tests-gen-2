@@ -128,6 +128,17 @@ export function getGigaChatModel(): string {
   return process.env.GIGACHAT_MODEL?.trim() || 'GigaChat'
 }
 
+/**
+ * Путь к PEM корня НУЦ Минцифры (например `russian_root.crt` из gu-st.ru).
+ * Альтернатива на уровне процесса: `NODE_EXTRA_CA_CERTS` без этого кода.
+ * @see https://developers.sber.ru/docs/ru/gigachat/certificates?lang=js
+ */
+export function getGigaChatCaCertPath(): string | null {
+  const v = process.env.GIGACHAT_CA_CERT?.trim()
+  if (!v) return null
+  return v
+}
+
 function envFlagTruthy(raw: string | undefined): boolean {
   if (!raw) return false
   const v = raw

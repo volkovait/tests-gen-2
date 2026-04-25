@@ -10,6 +10,7 @@ import {
 } from './config'
 import { gigachatOAuthPostHttps } from './oauth-post'
 import type { OAuthTokenResponse } from './types'
+import { getGigaChatTlsCaBundle } from './tls-ca'
 
 /** Same default as @see https://github.com/ai-forever/gigachat-js/blob/master/src/constants.ts */
 const GIGACHAT_USER_AGENT = 'GigaChat-js-lib'
@@ -54,12 +55,11 @@ export async function getGigaChatAccessToken(): Promise<string> {
     oauthHeaders['X-Client-ID'] = clientIdOpt
   }
 
-  const { statusCode, rawBody } = await gigachatOAuthPostHttps(
-    oauthUrl,
-    bodyStr,
-    oauthHeaders,
-    !isGigaChatTlsInsecure(),
-  )
+  const ca = getGigaChatTlsCaBundle()
+  const { statusCode, rawBody } = await gigachatOAuthPostHttps(oauthUrl, bodyStr, oauthHeaders, {
+    rejectUnauthorized: !isGigaChatTlsInsecure(),
+    ...(ca ? { ca: [...ca] } : {}),
+  })
 
   if (statusCode < 200 || statusCode >= 300) {
     throw new Error(`GigaChat OAuth failed: ${statusCode} ${rawBody.slice(0, 500)}`)

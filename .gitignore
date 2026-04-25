@@ -61,3 +61,5 @@ Thumbs.db
 # Misc
 *.pem
 .cache/
+
+russian_root.crt
