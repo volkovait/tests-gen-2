@@ -1,7 +1,10 @@
 import * as https from 'node:https'
+import type { RequestOptions } from 'node:https'
 import { URL } from 'node:url'
 
 export type GigachatOAuthHttpsResult = { statusCode: number; rawBody: string }
+
+export type GigachatOAuthTlsOptions = Pick<RequestOptions, 'ca' | 'rejectUnauthorized'>
 
 /**
  * OAuth token POST via `node:https` (no redirect follow, no fetch/undici).
@@ -11,7 +14,7 @@ export function gigachatOAuthPostHttps(
   urlStr: string,
   bodyUtf8: string,
   headers: Record<string, string>,
-  tlsRejectUnauthorized: boolean,
+  tls: GigachatOAuthTlsOptions,
 ): Promise<GigachatOAuthHttpsResult> {
   const url = new URL(urlStr)
   if (url.protocol !== 'https:') {
@@ -29,7 +32,8 @@ export function gigachatOAuthPostHttps(
           ...headers,
           'Content-Length': String(Buffer.byteLength(bodyUtf8, 'utf8')),
         },
-        rejectUnauthorized: tlsRejectUnauthorized,
+        rejectUnauthorized: tls.rejectUnauthorized,
+        ...(tls.ca !== undefined ? { ca: tls.ca } : {}),
       },
       (res) => {
         const chunks: Buffer[] = []
