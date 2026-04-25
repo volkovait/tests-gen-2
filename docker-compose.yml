@@ -4,6 +4,7 @@
 # Подготовьте .env в корне репозитория (или экспортируйте переменные) с:
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY  (или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+#   GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET (и при необходимости LESSON_TELEGRAM_*)
 #
 # Запуск: docker compose up --build
 
@@ -35,6 +36,8 @@ services:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+    env_file:
+      - .env
     environment:
       STATIC_SERVER_URL: http://static-server:3001
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
