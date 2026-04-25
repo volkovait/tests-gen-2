@@ -5,6 +5,7 @@
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY  (или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
 #   GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET (и при необходимости LESSON_TELEGRAM_*)
+#   TELEGRAM_HTTPS_PROXY или HTTPS_PROXY — если с контейнера нет прямого доступа к api.telegram.org
 #   GIGACHAT_CA_CERT — путь к russian_trusted_root (PEM) для TLS к ngw/gigachat на Linux без корня Минцифры в ОС
 #
 # Запуск: docker compose up --build
