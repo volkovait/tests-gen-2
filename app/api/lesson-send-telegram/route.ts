@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getLessonTelegramCredentials } from '@/lib/html-lesson/lesson-telegram'
-import { telegramUndiciFetch } from '@/lib/telegram/telegram-fetch'
+import { telegramProxyEnvIsSet, telegramUndiciFetch } from '@/lib/telegram/telegram-fetch'
 import { stripHtmlForTelegramPlain } from '@/lib/telegram/strip-html-for-plain'
 import { setDefaultResultOrder } from 'node:dns'
 import { NextResponse } from 'next/server'
@@ -73,12 +73,17 @@ async function sendTelegramMessage(params: {
 
 function jsonTelegramUnreachable(logDetail: string) {
   console.error('[lesson-send-telegram] unreachable', logDetail)
+  const base =
+    'Не удалось связаться с api.telegram.org (Bot API по HTTPS). Если с сервера нет прямого доступа — задайте реальный URL в TELEGRAM_HTTPS_PROXY или HTTPS_PROXY и перезапустите приложение.'
+  const proxyDnsFail =
+    telegramProxyEnvIsSet() && /\bENOTFOUND\b|\bEAI_AGAIN\b/i.test(logDetail)
+      ? ' Сейчас в env указан прокси, но имя хоста прокси не находится в DNS (часто оставляют пример вроде proxy.example.com) — замените на рабочий хост:порт или удалите TELEGRAM_HTTPS_PROXY/HTTPS_PROXY, если прокси не используете.'
+      : ''
   return NextResponse.json(
     {
       ok: false,
       error: 'telegram_unreachable',
-      description:
-        'Не удалось связаться с api.telegram.org (Bot API по HTTPS, не MTProto). Если прямой доступ с сервера заблокирован, задайте TELEGRAM_HTTPS_PROXY или стандартные HTTPS_PROXY/HTTP_PROXY и перезапустите приложение.',
+      description: base + proxyDnsFail,
     },
     { status: 503 },
   )
