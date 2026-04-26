@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getOAuthRedirectOrigin } from '@/lib/auth/oauth-redirect-origin'
 import { safeInternalPath } from '@/lib/auth/safe-next-path'
 
 /**
@@ -11,14 +12,18 @@ import { safeInternalPath } from '@/lib/auth/safe-next-path'
  * `https://<project-ref>.supabase.co/auth/v1/callback` (from Supabase provider
  * settings). “Unsupported provider: provider is not enabled” means Google is
  * off or credentials are missing in the Supabase project.
+ *
+ * In Supabase: Authentication → URL Configuration — set **Site URL** to your
+ * production origin (not localhost) and add `https://<prod>/auth/callback` (or
+ * wildcard) under **Redirect URLs**. If `redirectTo` is not allow-listed,
+ * Supabase falls back to Site URL (often still localhost).
  */
 export async function signInWithGoogle(
   supabase: SupabaseClient,
   nextPath: string,
 ): Promise<{ error: Error | null }> {
   const next = safeInternalPath(nextPath, '/dashboard')
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : ''
+  const origin = getOAuthRedirectOrigin()
   const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`
 
   const { data, error } = await supabase.auth.signInWithOAuth({

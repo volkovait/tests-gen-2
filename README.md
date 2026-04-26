@@ -97,6 +97,7 @@ flowchart LR
 | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_SUPABASE_URL`                                                          | URL проекта Supabase                                                                                                   |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` или `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`          | публичный ключ (anon / publishable)                                                                                    |
+| `NEXT_PUBLIC_APP_URL`                                                               | опционально: канонический origin продакшена (`https://example.com`) для OAuth `redirectTo`; должен совпадать с **Site URL** / **Redirect URLs** в Supabase |
 | `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL`                                             | опционально: redirect после подтверждения email в dev                                                                  |
 | `STATIC_SERVER_URL` / `NEXT_PUBLIC_STATIC_SERVER_URL`                               | базовый URL Express static-server для `[/api/backend-health](app/api/backend-health/route.ts)`                         |
 | `GIGACHAT_CLIENT_ID`                                                                | идентификатор клиента (для OAuth и заголовка, см. код)                                                                 |
