@@ -2,15 +2,9 @@
 
 import { useState } from 'react'
 
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
-type TelegramSitePingButtonProps = {
-  /** На дашборде (редирект с `/` для залогиненных) — компактный вид под shadcn Card. */
-  variant?: 'landing' | 'dashboard'
-}
-
-export function TelegramSitePingButton({ variant = 'landing' }: TelegramSitePingButtonProps) {
+export function TelegramSitePingButton() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
   const [message, setMessage] = useState('')
 
@@ -43,56 +37,33 @@ export function TelegramSitePingButton({ variant = 'landing' }: TelegramSitePing
       }
 
       setStatus('err')
-      setMessage(
-        res.status === 401
-          ? desc ||
-              'Войдите в аккаунт. Локально: `pnpm dev` без входа, или TELEGRAM_TEST_PING_SKIP_AUTH=true при `next start`.'
-          : desc || `Ошибка ${res.status}`,
-      )
+      setMessage(desc || `Ошибка ${res.status}`)
     } catch (e) {
       setStatus('err')
       setMessage(e instanceof Error ? e.message : 'Сеть')
     }
   }
 
-  const isDashboard = variant === 'dashboard'
-
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-2 text-sm',
-        isDashboard
-          ? 'items-stretch'
-          : 'mt-6 items-center rounded-lg border border-dashed border-[#4056A1]/40 bg-white/60 px-4 py-3 text-[#333333]',
-      )}
-    >
-      {isDashboard ? (
-        <p className="text-xs text-muted-foreground">
-          Тот же серверный вызов Bot API, что при отправке результата из урока. Успех — «Привет» в чате; сбой сети —
-          та же 503, что в уроке.
-        </p>
-      ) : (
-        <span className="text-center text-xs text-[#333333]/80">
-          Тест Bot API с этого origin. В проде — после входа; в `pnpm dev` — без входа.
-        </span>
-      )}
+    <div className="mt-6 flex flex-col items-center gap-2 rounded-lg border border-dashed border-[#4056A1]/40 bg-white/60 px-4 py-3 text-sm text-[#333333]">
+      <span className="text-center text-xs text-[#333333]/80">
+        Тест Bot API с этого origin (как главная). Нужен вход в аккаунт.
+      </span>
       <Button
         type="button"
         variant="outline"
         size="sm"
         disabled={status === 'loading'}
         onClick={onClick}
-        className={cn(isDashboard ? 'w-fit' : 'border-[#4056A1] text-[#4056A1]')}
+        className="border-[#4056A1] text-[#4056A1]"
       >
         {status === 'loading' ? 'Отправка…' : 'Тест: «Привет» в Telegram'}
       </Button>
-      {message ? (
+      {true ? (
         <p
-          className={cn(
-            'text-sm',
-            isDashboard ? 'text-left' : 'text-center',
-            status === 'ok' ? 'text-emerald-700 dark:text-emerald-500' : 'text-destructive',
-          )}
+          className={
+            status === 'ok' ? 'text-center text-emerald-800' : 'text-center text-red-700'
+          }
           role="status"
         >
           {message}
