@@ -223,9 +223,9 @@ export default function UploadPage() {
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={LABELS.UPLOAD_TITLE_PLACEHOLDER} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="correct-answers-hint" className="text-muted-foreground">
-                  {LABELS.UPLOAD_CORRECT_ANSWERS_LABEL}{" "}
-                  <span className="font-normal">({LABELS.UPLOAD_CORRECT_ANSWERS_OPTIONAL})</span>
+                <Label htmlFor="correct-answers-hint" className="block text-muted-foreground vertical-align: middle;">
+                  <div className="flex items-center gap-2">{LABELS.UPLOAD_CORRECT_ANSWERS_LABEL}</div>
+                  <div className="font-normal">({LABELS.UPLOAD_CORRECT_ANSWERS_OPTIONAL})</div>
                 </Label>
                 <Textarea
                   id="correct-answers-hint"
