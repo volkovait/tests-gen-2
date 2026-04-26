@@ -63,3 +63,5 @@ Thumbs.db
 .cache/
 
 russian_root.crt
+docker/certs/*.crt
+docker/certs/*.pem

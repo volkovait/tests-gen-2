@@ -5,7 +5,8 @@
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY  (или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
 #   GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET
-#   GIGACHAT_CA_CERT — путь к russian_trusted_root (PEM) для TLS к ngw/gigachat на Linux без корня Минцифры в ОС
+#   GIGACHAT_CA_CERT — путь внутри контейнера к PEM (по умолчанию /app/certs/russian_root.crt).
+#   Положите файл на сервере в ./docker/certs/russian_root.crt рядом с compose — он смонтируется в контейнер.
 #
 # Запуск: docker compose up --build
 
@@ -44,6 +45,10 @@ services:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+      # Корень НУЦ для TLS к GigaChat; путь в контейнере. Файл с хоста: ./docker/certs/russian_root.crt
+      GIGACHAT_CA_CERT: ${GIGACHAT_CA_CERT:-/app/certs/russian_root.crt}
+    volumes:
+      - ./docker/certs:/app/certs:ro
     depends_on:
       - static-server
     networks:

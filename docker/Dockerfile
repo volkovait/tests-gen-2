@@ -37,6 +37,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Опционально: положите PEM в docker/certs/russian_root.crt перед `docker compose build`,
+# чтобы корень НУЦ был в образе без bind-mount (например CI без доступа к серверной папке).
+COPY --chown=nextjs:nodejs docker/certs/ /app/certs/
+
 USER nextjs
 
 EXPOSE 3000
