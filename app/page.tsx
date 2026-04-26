@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { TelegramSitePingButton } from '@/components/telegram-site-ping-button'
 import { HOME_FEATURES, LABELS } from '@/lib/consts'
 import { Button } from '@/components/ui/button'
 import logoImg from '@/assets/logo.png'
@@ -85,7 +84,6 @@ export default function Home() {
                 <Link href="/auth/login">{LABELS.HOME_CTA_HAS_ACCOUNT}</Link>
               </Button>
             </div>
-            <TelegramSitePingButton />
           </div>
         </section>
 
