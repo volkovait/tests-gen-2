@@ -23,14 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Loader2, Send, Sparkles } from "lucide-react"
 
 type Role = "user" | "assistant"
@@ -57,7 +49,6 @@ export default function CreateLessonPage() {
   const [input, setInput] = useState("")
   const [genLoading, setGenLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [answersDialogOpen, setAnswersDialogOpen] = useState(false)
   const [correctAnswersReflection, setCorrectAnswersReflection] = useState("")
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -76,20 +67,13 @@ export default function CreateLessonPage() {
     setMessages((m) => [...m, { role: "user", content: text }])
   }
 
-  const openGenerateDialog = () => {
+  const runGeneration = async () => {
     if (!hasFirstUserMessage) {
       setError(LABELS.CREATE_ERROR_NEED_MESSAGE)
       return
     }
-    setError(null)
-    setCorrectAnswersReflection("")
-    setAnswersDialogOpen(true)
-  }
-
-  const runGeneration = async () => {
     setGenLoading(true)
     setError(null)
-    setAnswersDialogOpen(false)
     try {
       const structured = buildStructuredTestGenerationPrompt({
         userMessages,
@@ -136,6 +120,7 @@ export default function CreateLessonPage() {
   return (
     <AppShell active="create">
       <main className="container mx-auto max-w-3xl px-4 py-6">
+      <h1 className="mb-2 font-serif text-3xl font-bold text-primary">{LABELS.CHAT_WITH_AI}</h1>
         {error ? (
           <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -160,9 +145,27 @@ export default function CreateLessonPage() {
                     {msg.content}
                   </div>
                 ))
-              )}
+              )}             
               <div ref={bottomRef} />
             </div>
+
+            {hasFirstUserMessage ? (
+                <div className="space-y-2 rounded-lg border border-dashed border-[#D79922]/50 bg-[#EFE2BA]/25 p-3">
+                  <div>
+                    <p className="text-sm font-medium text-[#4056A1]">{LABELS.CREATE_ANSWERS_DIALOG_TITLE}</p>
+                    <p className="text-xs text-muted-foreground">{LABELS.CREATE_ANSWERS_DIALOG_DESC}</p>
+                  </div>
+                  <Textarea
+                    value={correctAnswersReflection}
+                    onChange={(e) => setCorrectAnswersReflection(e.target.value)}
+                    placeholder={LABELS.CREATE_ANSWERS_DIALOG_PLACEHOLDER}
+                    rows={4}
+                    maxLength={16_000}
+                    className="resize-y border-[#C5CBE3] bg-white text-sm"
+                    aria-label={LABELS.CREATE_ANSWERS_DIALOG_TITLE}
+                  />
+                </div>
+              ) : null}
 
             {hasFirstUserMessage ? (
               <div className="space-y-3 rounded-lg border border-dashed border-[#4056A1]/40 bg-[#EFE2BA]/30 p-3">
@@ -260,44 +263,13 @@ export default function CreateLessonPage() {
               variant="secondary"
               className="btn-cta-gold w-full border-0 sm:w-auto"
               disabled={genLoading || !hasFirstUserMessage}
-              onClick={openGenerateDialog}
+              onClick={() => void runGeneration()}
             >
               {genLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {LABELS.CREATE_GENERATE_TEST}
             </Button>
           </CardContent>
         </Card>
-
-        <Dialog open={answersDialogOpen} onOpenChange={setAnswersDialogOpen}>
-          <DialogContent className="border-2 border-[#C5CBE3] sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="font-serif text-[#4056A1]">{LABELS.CREATE_ANSWERS_DIALOG_TITLE}</DialogTitle>
-              <DialogDescription>{LABELS.CREATE_ANSWERS_DIALOG_DESC}</DialogDescription>
-            </DialogHeader>
-            <Textarea
-              value={correctAnswersReflection}
-              onChange={(e) => setCorrectAnswersReflection(e.target.value)}
-              placeholder={LABELS.CREATE_ANSWERS_DIALOG_PLACEHOLDER}
-              rows={4}
-              maxLength={16_000}
-              className="border-[#C5CBE3]"
-            />
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setAnswersDialogOpen(false)}>
-                {LABELS.CREATE_ANSWERS_DIALOG_CANCEL}
-              </Button>
-              <Button
-                type="button"
-                className="bg-[#D79922] text-white hover:bg-[#c2891c]"
-                disabled={genLoading}
-                onClick={() => void runGeneration()}
-              >
-                {genLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {LABELS.CREATE_ANSWERS_DIALOG_CONFIRM}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </main>
     </AppShell>
   )

@@ -2,9 +2,10 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
+import { HistoryLessonCard } from "@/components/history/history-lesson-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowLeft, ArrowRight, Calendar, Plus, Sparkles } from "lucide-react"
+import { ArrowLeft, Plus, Sparkles } from "lucide-react"
 import { LABELS } from "@/lib/consts"
 
 function formatDate(dateString: string) {
@@ -84,35 +85,14 @@ export default async function HistoryPage() {
         ) : (
           <div className="space-y-4">
             {lessonsList.map((lesson) => (
-              <Card key={lesson.id} className="transition-colors hover:border-primary/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <Link href={`/learn/${lesson.id}/view`} className="min-w-0 flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--lb-gold)]/20">
-                          <Sparkles className="h-6 w-6 text-[var(--lb-gold)]" />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="truncate font-semibold text-foreground">{lesson.title}</h3>
-                          <p className="text-sm capitalize text-muted-foreground">{lesson.source_type}</p>
-                          {lesson.source_filename ? (
-                            <p className="truncate text-xs text-muted-foreground">{lesson.source_filename}</p>
-                          ) : null}
-                          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(lesson.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link href={`/learn/${lesson.id}/view`}>
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <HistoryLessonCard
+                key={lesson.id}
+                lessonId={lesson.id}
+                title={lesson.title}
+                sourceType={lesson.source_type}
+                sourceFilename={lesson.source_filename}
+                createdAtLabel={formatDate(lesson.created_at)}
+              />
             ))}
           </div>
         )}

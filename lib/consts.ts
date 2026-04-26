@@ -63,7 +63,7 @@ export const LABELS = {
   CREATE_ERROR_GENERIC: 'Ошибка',
   CREATE_ERROR_GENERATION: 'Ошибка генерации',
   CREATE_ERROR_NEED_MESSAGE: 'Сначала напишите хотя бы одно сообщение.',
-  CREATE_HINT_EXAMPLE: 'Например: «тест по временам немецкого для A2, тема путешествия».',
+  CREATE_HINT_EXAMPLE: 'Опишите свою идею, например: «тест по временам немецкого для A2, тема путешествия».',
   CREATE_ASSISTANT_TYPING: 'Ассистент пишет…',
   CREATE_PLACEHOLDER_MESSAGE: 'Ваше сообщение…',
   CREATE_SEND: 'Отправить',
@@ -80,8 +80,6 @@ export const LABELS = {
     'Есть ли у вас правильные ответы для теста? (Необязательно) Если да — опишите их здесь; можно оставить пустым.',
   CREATE_ANSWERS_DIALOG_PLACEHOLDER:
     'Например: задание 1 — B, задание 2 — порядок слов: She goes to school…',
-  CREATE_ANSWERS_DIALOG_CANCEL: 'Отмена',
-  CREATE_ANSWERS_DIALOG_CONFIRM: 'Сгенерировать тест',
 
   UPLOAD_ERROR_FILE_TYPE: 'Загрузите PDF или изображение (PNG, JPEG, WebP)',
   UPLOAD_ERROR_GENERATION: 'Ошибка генерации',
@@ -121,6 +119,14 @@ export const LABELS = {
   HISTORY_CHAT_SHORT: 'Чат с ИИ',
   HISTORY_UPLOAD_SHORT: 'Из PDF или фото',
   HISTORY_BACK_DASHBOARD: '← Главная',
+  HISTORY_DELETE_ARIA: 'Удалить тест',
+  HISTORY_DELETE_CONFIRM_TITLE: 'Удалить тест?',
+  HISTORY_DELETE_CONFIRM_DESC:
+    'Тест будет удалён безвозвратно вместе с сохранёнными результатами прохождений.',
+  HISTORY_DELETE_CANCEL: 'Отмена',
+  HISTORY_DELETE_CONFIRM_ACTION: 'Удалить',
+  HISTORY_DELETE_IN_PROGRESS: 'Удаление…',
+  HISTORY_DELETE_ERROR: 'Не удалось удалить тест. Попробуйте ещё раз.',
   LEARN_VIEW_TO_CABINET: 'На главную',
   LEARN_VIEW_NEW_TAB: 'Отдельная вкладка',
   LEARN_EDIT_WITH_AI: 'Редактировать с помощью ИИ',

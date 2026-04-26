@@ -49,7 +49,7 @@ export function buildStructuredTestGenerationPrompt(params: {
     lines.push('')
   }
 
-  lines.push('### Ответ на вопрос «Есть ли у вас правильные ответы для теста?» (необязательно)')
+  lines.push('### Правильные ответы из чата (необязательно; блок под сообщениями пользователя)')
   const reflection = params.correctAnswersReflection.trim()
   lines.push(reflection.length > 0 ? reflection : '(пользователь не добавил отдельного текста — при отсутствии ключей выбери эталонные ответы сам)')
   lines.push('')
