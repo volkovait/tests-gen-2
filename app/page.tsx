@@ -47,7 +47,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="relative">
+      <main className="relative" style={{height: 'calc(100vh - 65px - 85px)'}}>
         <section className="container mx-auto px-4 py-16 md:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="font-serif text-4xl font-bold leading-tight text-[#4056A1] md:text-5xl lg:text-6xl">
