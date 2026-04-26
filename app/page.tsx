@@ -88,7 +88,6 @@ export default function Home() {
         </section>
 
         <section className="relative border-t border-[#C5CBE3] bg-white py-16">
-          <div className="pointer-events-none absolute right-8 top-8 h-24 w-24 rounded-full border-2 border-[#D79922]/40" aria-hidden />
           <div className="container mx-auto px-4">
             <h2 className="text-center font-serif text-2xl font-bold text-[#4056A1] md:text-3xl">{LABELS.HOME_FEATURES_TITLE}</h2>
             <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-2">

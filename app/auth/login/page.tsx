@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
+import { safeInternalPath } from "@/lib/auth/safe-next-path"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,8 +17,18 @@ import { GoogleAuthButton } from "@/components/auth/google-auth-button"
 import logoImg from "@/assets/logo.png"
 import { LABELS } from "@/lib/consts"
 
-export default function LoginPage() {
+function LoginFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted">
+      <Spinner className="h-8 w-8 text-muted-foreground" />
+    </div>
+  )
+}
+
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = safeInternalPath(searchParams.get("next"), "/dashboard")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +51,7 @@ export default function LoginPage() {
       return
     }
 
-    router.push("/dashboard")
+    router.push(nextPath)
     router.refresh()
   }
 
@@ -69,7 +80,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <GoogleAuthButton nextPath="/dashboard" />
+            <GoogleAuthButton nextPath={nextPath} />
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <Separator className="flex-1" />
               <span className="shrink-0">{LABELS.AUTH_OR_EMAIL}</span>
@@ -137,5 +148,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginPageInner />
+    </Suspense>
   )
 }

@@ -2,12 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { safeInternalPath } from '@/lib/auth/safe-next-path'
 
 /**
- * Google OAuth via Supabase (OAuth 2.0 authorization code flow, same idea as
- * Passport’s `passport-google-oauth` on Express — see
- * https://www.passportjs.org/tutorials/google/ — implemented here with
- * Supabase because the app is Next.js + Supabase, not Express + Passport).
+ * Google OAuth via Supabase (authorization code flow). Supabase calls Google’s
+ * authorize/token/userinfo endpoints — you do not configure those URLs in app
+ * code. In Supabase: Authentication → Sign In / Providers → Google → enable
+ * and paste OAuth Client ID + Client Secret from Google Cloud Console.
  *
- * Enable the provider in Supabase: Authentication → Providers → Google.
+ * In Google Cloud: OAuth client type “Web application”, Authorized redirect URI:
+ * `https://<project-ref>.supabase.co/auth/v1/callback` (from Supabase provider
+ * settings). “Unsupported provider: provider is not enabled” means Google is
+ * off or credentials are missing in the Supabase project.
  */
 export async function signInWithGoogle(
   supabase: SupabaseClient,
