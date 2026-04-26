@@ -120,7 +120,7 @@ export default function UploadPage() {
         <div className="mb-6 md:hidden">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <ArrowLeft className="h-4 w-4" />
-            {LABELS.NAV_CABINET}
+            {LABELS.NAV_DASHBOARD}
           </Link>
         </div>
 

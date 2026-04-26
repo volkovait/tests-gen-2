@@ -4,6 +4,7 @@ import {
   LESSON_SPEC_REPAIR_SYSTEM,
   LESSON_SPEC_SYSTEM,
   buildRepairUserPrompt,
+  buildUserPromptForLessonEdit,
   buildUserPromptForLessonSpec,
 } from '@/lib/html-lesson/lesson-spec-prompt'
 import { extractJsonDocument } from '@/lib/lesson-spec/extract-json-document'
@@ -48,34 +49,52 @@ function finalizeLessonSpecFromLoose(loose: unknown): ValidatedLessonSpecResult 
   }
 }
 
-export async function generateValidatedLessonSpec(params: {
-  title: string
-  materialSummary: string
-  correctAnswersHint?: string
-  logDir?: string
-  /** Логи: generate-spec.txt, generate-spec-repair.txt */
-}): Promise<ValidatedLessonSpecResult> {
+/** Лимит вывода модели для JSON-спецификации теста (GigaChat max_tokens). */
+export const LESSON_SPEC_MAX_OUTPUT_TOKENS = 20_000
+
+export type GenerateValidatedLessonSpecParams =
+  | {
+      kind: 'create'
+      title: string
+      materialSummary: string
+      correctAnswersHint?: string
+      logDir?: string
+    }
+  | {
+      kind: 'edit'
+      title: string
+      currentTestPlainText: string
+      editInstruction: string
+      logDir?: string
+    }
+
+export async function generateValidatedLessonSpec(
+  params: GenerateValidatedLessonSpecParams,
+): Promise<ValidatedLessonSpecResult> {
   const log = params.logDir
     ? { outputDir: params.logDir, fileBase: 'generate-spec' as const }
     : undefined
 
-  const raw = await gigachatChatCompletion(
-    [
-      { role: 'system', content: LESSON_SPEC_SYSTEM },
-      {
-        role: 'user',
-        content: buildUserPromptForLessonSpec({
+  const userContent =
+    params.kind === 'create'
+      ? buildUserPromptForLessonSpec({
           title: params.title,
           materialSummary: params.materialSummary,
           ...(params.correctAnswersHint?.trim()
             ? { correctAnswersHint: params.correctAnswersHint.trim() }
             : {}),
-        }),
-      },
-    ],
+        })
+      : buildUserPromptForLessonEdit({
+          title: params.title,
+          currentTestPlainText: params.currentTestPlainText,
+          editInstruction: params.editInstruction,
+        })
+
+  const raw = await gigachatChatCompletion(
+    [{ role: 'system', content: LESSON_SPEC_SYSTEM }, { role: 'user', content: userContent }],
     {
-      maxTokens: 8192,
-      temperature: 0.45,
+      maxTokens: LESSON_SPEC_MAX_OUTPUT_TOKENS,
+      temperature: params.kind === 'edit' ? 0.35 : 0.45,
       ...(log ? { log } : {}),
     },
   )
@@ -108,7 +127,7 @@ export async function generateValidatedLessonSpec(params: {
       },
     ],
     {
-      maxTokens: 8192,
+      maxTokens: LESSON_SPEC_MAX_OUTPUT_TOKENS,
       temperature: 0.2,
       ...(repairLog ? { log: repairLog } : {}),
     },

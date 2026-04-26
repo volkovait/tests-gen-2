@@ -26,6 +26,7 @@ export async function generateInteractiveHtmlLesson(params: {
   logDir?: string
 }): Promise<{ html: string; validationWarnings: string[] }> {
   const { spec, validationWarnings } = await generateValidatedLessonSpec({
+    kind: 'create',
     title: params.title,
     materialSummary: params.materialSummary,
     ...(params.correctAnswersHint?.trim()
@@ -41,4 +42,27 @@ export async function generateInteractiveHtmlLesson(params: {
     throw new Error('Сгенерированный HTML слишком большой')
   }
   return { html, validationWarnings }
+}
+
+export async function generateInteractiveHtmlLessonFromEdit(params: {
+  title: string
+  currentTestPlainText: string
+  editInstruction: string
+  logDir?: string
+}): Promise<{ html: string; validationWarnings: string[]; resolvedTitle: string }> {
+  const { spec, validationWarnings } = await generateValidatedLessonSpec({
+    kind: 'edit',
+    title: params.title,
+    currentTestPlainText: params.currentTestPlainText,
+    editInstruction: params.editInstruction,
+    logDir: params.logDir,
+  })
+  const title = canonicalLessonTitle(params.title, spec.title)
+  const specWithTitle: LessonSpec = lessonSpecSchema.parse({ ...spec, title })
+  const html = buildLessonHtmlFromSpec(specWithTitle)
+  const enc = new TextEncoder().encode(html)
+  if (enc.length > MAX_HTML_BYTES) {
+    throw new Error('Сгенерированный HTML слишком большой')
+  }
+  return { html, validationWarnings, resolvedTitle: title }
 }

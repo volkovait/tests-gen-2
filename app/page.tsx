@@ -1,18 +1,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { HOME_FEATURES, LABELS } from '@/lib/consts'
+import { LABELS } from '@/lib/consts'
 import { Button } from '@/components/ui/button'
 import logoImg from '@/assets/logo.png'
-import { BookOpen, MessageCircle, Sparkles, Upload } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import type { HomeFeatureKey } from '@/lib/consts'
-
-const HOME_FEATURE_ICONS: Record<HomeFeatureKey, LucideIcon> = {
-  chat: MessageCircle,
-  upload: Upload,
-  page: BookOpen,
-  feedback: Sparkles,
-}
 
 /** Публичный лендинг: кэш на CDN/браузер, ревалидация без персональных данных в HTML. */
 export const revalidate = 300
@@ -83,29 +73,6 @@ export default function Home() {
               >
                 <Link href="/auth/login">{LABELS.HOME_CTA_HAS_ACCOUNT}</Link>
               </Button>
-            </div>
-          </div>
-        </section>
-
-        <section className="relative border-t border-[#C5CBE3] bg-white py-16">
-          <div className="container mx-auto px-4">
-            <h2 className="text-center font-serif text-2xl font-bold text-[#4056A1] md:text-3xl">{LABELS.HOME_FEATURES_TITLE}</h2>
-            <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-2">
-              {HOME_FEATURES.map((item) => {
-                const Icon = HOME_FEATURE_ICONS[item.key]
-                return (
-                  <div
-                    key={item.key}
-                    className="rounded-xl border-2 border-[#4056A1] bg-white p-6 shadow-sm transition-shadow hover:shadow-xl"
-                  >
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#D79922]/25 text-[#4056A1]">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="font-serif text-lg font-semibold text-[#4056A1]">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[#333333]/90">{item.text}</p>
-                  </div>
-                )
-              })}
             </div>
           </div>
         </section>

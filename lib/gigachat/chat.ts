@@ -23,7 +23,7 @@ export async function gigachatChatCompletion(
   const url = gigachatChatCompletionsUrl()
   const model = getGigaChatModel()
 
-  const temperature = options?.temperature ?? 0.6
+  const temperature = options?.temperature ?? 0.3
   const max_tokens = options?.maxTokens ?? 4096
   const requestPayload = {
     model,
