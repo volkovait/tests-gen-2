@@ -1263,72 +1263,6 @@ function highlightResults(result) {
   }
 }
 
-function buildTelegramPre(studentName, result) {
-  const lines = [];
-  lines.push(`Студент: ${studentName}`);
-  lines.push(`Балл: ${result.score} из ${result.max}`);
-  lines.push("");
-  lines.push("№ | Правильный ответ | Ответ студента");
-  lines.push("--+------------------+----------------");
-  for (const row of result.rows) {
-    const n = String(row.serial).padStart(2, " ");
-    lines.push(`${n} | ${row.correctLine} | ${row.studentLine}`);
-  }
-  return lines.join("\n");
-}
-
-async function sendTelegramHtmlChunk(htmlBody) {
-  const res = await fetch("/api/lesson-send-telegram", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ parts: [htmlBody], parse_mode: "HTML" }),
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok || !data || data.ok !== true) {
-    const desc =
-      data && typeof data.description === "string"
-        ? data.description
-        : data && typeof data.error === "string"
-          ? data.error
-          : res.statusText;
-    throw new Error(desc || "Ошибка отправки (прокси / Telegram)");
-  }
-}
-
-async function sendTelegramPreTable(prePlain) {
-  const maxLen = 3500;
-  const lines = prePlain.split("\n");
-  const chunks = [];
-  let buf = [];
-  let len = 0;
-
-  const flush = () => {
-    if (buf.length) {
-      chunks.push(buf.join("\n"));
-      buf = [];
-      len = 0;
-    }
-  };
-
-  for (const line of lines) {
-    const add = line.length + (buf.length ? 1 : 0);
-    if (len + add > maxLen && buf.length) {
-      flush();
-    }
-    buf.push(line);
-    len += add;
-  }
-  flush();
-
-  for (let i = 0; i < chunks.length; i += 1) {
-    const header =
-      chunks.length > 1 ? `Сообщение ${i + 1} из ${chunks.length}\n\n` : "";
-    const html = `<pre>${escapeHtml(header + chunks[i])}</pre>`;
-    await sendTelegramHtmlChunk(html);
-  }
-}
-
 function lockTest() {
   document.body.classList.add("test-locked");
   document
@@ -1363,15 +1297,13 @@ function init() {
   const nameInput = document.getElementById("student-name");
   const panel = document.getElementById("result-panel");
   const scoreLine = document.getElementById("score-line");
-  const tgStatus = document.getElementById("telegram-status");
-  const tgError = document.getElementById("telegram-error");
 
   if (!btn) {
     console.error("Не найден элемент #finish-btn");
     return;
   }
 
-  btn.addEventListener("click", async () => {
+  btn.addEventListener("click", () => {
     const studentName = (nameInput && nameInput.value.trim()) || "";
     if (!studentName) {
       alert("Введите ФИО в начале страницы.");
@@ -1380,7 +1312,9 @@ function init() {
     }
 
     const answers = collectAnswers();
+    console.log("[lesson-test] grading, answer keys:", Object.keys(answers).length);
     const result = gradeAnswers(answers);
+    console.log("[lesson-test] score", result.score, "/", result.max);
     highlightResults(result);
     saveFormState();
 
@@ -1388,19 +1322,7 @@ function init() {
       scoreLine.textContent = `Набрано баллов: ${result.score} из ${result.max}`;
     }
     if (panel) panel.classList.add("visible");
-    if (tgStatus) tgStatus.textContent = "Отправка в Telegram…";
-    if (tgError) tgError.textContent = "";
-
-    const pre = buildTelegramPre(studentName, result);
-
-    try {
-      await sendTelegramPreTable(pre);
-      if (tgStatus) tgStatus.textContent = "Результаты отправлены в Telegram.";
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (tgStatus) tgStatus.textContent = "Не удалось отправить в Telegram.";
-      if (tgError) tgError.textContent = msg;
-    }
+    console.log("[lesson-test] finish, results shown for", studentName);
 
     lockTest();
     saveFormState();

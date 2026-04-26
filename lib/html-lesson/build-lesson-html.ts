@@ -37,7 +37,7 @@ export function buildLessonHtmlFromSpec(spec: LessonSpec): string {
   const title = escapeHtmlAttr(spec.title)
   const subtitleBlock = spec.subtitle
     ? `<p>${escapeHtmlText(spec.subtitle)}</p>`
-    : '<p>Интерактивный тест. Результаты отправляются в Telegram-бот для проверки</p>'
+    : '<p>Интерактивный тест с автоматической проверкой ответов</p>'
 
   return `<!DOCTYPE html>
 <html lang="ru">
@@ -63,13 +63,11 @@ ${css}
     </header>
     <div id="test-root" class="test-root" role="main"></div>
     <div class="actions">
-      <button type="button" id="finish-btn">Завершить тест и отправить результаты</button>
+      <button type="button" id="finish-btn">Завершить тест и показать результаты</button>
     </div>
     <section class="result-panel" id="result-panel" aria-live="polite">
       <h3>Итог</h3>
       <p class="score" id="score-line"></p>
-      <p id="telegram-status"></p>
-      <p class="error" id="telegram-error"></p>
     </section>
   </div>
   <script id="lesson-spec" type="application/json">${specJson}</script>

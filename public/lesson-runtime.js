@@ -1,6 +1,6 @@
 /**
  * Фиксированный рантайм интерактивного теста: читает JSON из #lesson-spec,
- * рендерит вопросы, проверяет ответы, отправляет итог в /api/lesson-send-telegram.
+ * рендерит вопросы, проверяет ответы, показывает итог на странице.
  */
 (function lessonRuntime() {
   "use strict";
@@ -621,77 +621,6 @@
     }
   }
 
-  function buildTelegramPre(studentName, result) {
-    var lines = [];
-    lines.push("Студент: " + studentName);
-    lines.push("Балл: " + result.score + " из " + result.max);
-    lines.push("");
-    lines.push("№ | Правильный ответ | Ответ студента");
-    lines.push("--+------------------+----------------");
-    for (var i = 0; i < result.rows.length; i += 1) {
-      var row = result.rows[i];
-      var n = String(row.serial).padStart(2, " ");
-      lines.push(n + " | " + row.correctLine + " | " + row.studentLine);
-    }
-    return lines.join("\n");
-  }
-
-  async function sendTelegramHtmlChunk(htmlBody) {
-    console.log("[lesson-test] POST /api/lesson-send-telegram (chunk)");
-    var res = await fetch("/api/lesson-send-telegram", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ parts: [htmlBody], parse_mode: "HTML" }),
-    });
-    var data = await res.json().catch(function () {
-      return null;
-    });
-    if (!res.ok || !data || data.ok !== true) {
-      var desc =
-        data && typeof data.description === "string"
-          ? data.description
-          : data && typeof data.error === "string"
-            ? data.error
-            : res.statusText;
-      throw new Error(desc || "Ошибка отправки (прокси / Telegram)");
-    }
-    console.log("[lesson-test] telegram chunk ok");
-  }
-
-  async function sendTelegramPreTable(prePlain) {
-    var maxLen = 3500;
-    var lines = prePlain.split("\n");
-    var chunks = [];
-    var buf = [];
-    var len = 0;
-
-    function flush() {
-      if (buf.length) {
-        chunks.push(buf.join("\n"));
-        buf = [];
-        len = 0;
-      }
-    }
-
-    for (var li = 0; li < lines.length; li += 1) {
-      var line = lines[li];
-      var add = line.length + (buf.length ? 1 : 0);
-      if (len + add > maxLen && buf.length) {
-        flush();
-      }
-      buf.push(line);
-      len += add;
-    }
-    flush();
-
-    for (var ci = 0; ci < chunks.length; ci += 1) {
-      var header = chunks.length > 1 ? "Сообщение " + (ci + 1) + " из " + chunks.length + "\n\n" : "";
-      var html = "<pre>" + escapeHtml(header + chunks[ci]) + "</pre>";
-      await sendTelegramHtmlChunk(html);
-    }
-  }
-
   function lockTest() {
     document.body.classList.add("test-locked");
     var nodes = document.querySelectorAll(
@@ -731,15 +660,13 @@
     var nameInput = document.getElementById("student-name");
     var panel = document.getElementById("result-panel");
     var scoreLine = document.getElementById("score-line");
-    var tgStatus = document.getElementById("telegram-status");
-    var tgError = document.getElementById("telegram-error");
 
     if (!btn) {
       console.error("[lesson-test] missing #finish-btn");
       return;
     }
 
-    btn.addEventListener("click", async function () {
+    btn.addEventListener("click", function () {
       var studentName = (nameInput && nameInput.value.trim()) || "";
       if (!studentName) {
         alert("Введите ФИО в начале страницы.");
@@ -758,20 +685,7 @@
         scoreLine.textContent = "Набрано баллов: " + result.score + " из " + result.max;
       }
       if (panel) panel.classList.add("visible");
-      if (tgStatus) tgStatus.textContent = "Отправка в Telegram…";
-      if (tgError) tgError.textContent = "";
-
-      var pre = buildTelegramPre(studentName, result);
-
-      try {
-        await sendTelegramPreTable(pre);
-        if (tgStatus) tgStatus.textContent = "Результаты отправлены в Telegram.";
-      } catch (e) {
-        var emsg = e instanceof Error ? e.message : String(e);
-        if (tgStatus) tgStatus.textContent = "Не удалось отправить в Telegram.";
-        if (tgError) tgError.textContent = emsg;
-        console.error("[lesson-test] telegram error", emsg);
-      }
+      console.log("[lesson-test] finish, results shown for", studentName);
 
       lockTest();
       saveFormState();
