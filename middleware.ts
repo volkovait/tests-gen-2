@@ -4,12 +4,10 @@ import { updateSession } from '@/lib/supabase/proxy'
 const protectedRoutes = [
   '/dashboard',
   '/upload',
-  '/generate',
   '/test',
   '/history',
   '/create',
   '/learn',
-  '/progress',
 ]
 
 function copyCookiesTo(from: NextResponse, to: NextResponse) {

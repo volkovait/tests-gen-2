@@ -85,6 +85,34 @@ ${params.materialSummary}
 Верни один JSON-объект version ${LESSON_SPEC_VERSION} с заполненными parts, exercises и questions.`
 }
 
+const EDIT_PLAIN_TEXT_MAX = 120_000
+
+export function buildUserPromptForLessonEdit(params: {
+  title: string
+  currentTestPlainText: string
+  editInstruction: string
+}): string {
+  const body = params.currentTestPlainText.trim()
+  const trimmed = body.length > EDIT_PLAIN_TEXT_MAX ? `${body.slice(0, EDIT_PLAIN_TEXT_MAX)}…` : body
+  return `Режим правки существующего теста.
+
+Название / тема (карточка в списке): ${params.title}
+
+Ниже — текстовое представление УЖЕ СГЕНЕРИРОВАННОГО теста (из HTML, теги убраны). Восстанови по нему полную структуру заданий и примени инструкцию пользователя. Сохрани всё, что пользователь явно не просил менять.
+
+ТЕКУЩИЙ ТЕСТ:
+---
+${trimmed}
+---
+
+ИНСТРУКЦИЯ ПОЛЬЗОВАТЕЛЯ (выполни точечно, остальное без изменений):
+---
+${params.editInstruction.trim()}
+---
+
+Верни один JSON version ${LESSON_SPEC_VERSION} по правилам системного сообщения — полная спецификация теста после правок.`
+}
+
 export const LESSON_SPEC_REPAIR_SYSTEM = `Ты получишь невалидный или почти готовый JSON спецификации теста и список ошибок валидации (Zod).
 Исправь ТОЛЬКО структуру данных: version, title, parts, exercises, questions, поля options/correctKey/wordBank/correctSentence, readingPassage.
 Убери HTML из всех строк; в options задай key как "A","B","C", а text — только текст варианта без префикса "A)".

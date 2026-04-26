@@ -87,7 +87,7 @@ export default async function OAuthConsentPage({
           </CardHeader>
           <CardFooter className="gap-2">
             <Button variant="outline" asChild>
-              <Link href="/dashboard">{LABELS.NAV_CABINET}</Link>
+              <Link href="/dashboard">{LABELS.NAV_DASHBOARD}</Link>
             </Button>
           </CardFooter>
         </Card>
