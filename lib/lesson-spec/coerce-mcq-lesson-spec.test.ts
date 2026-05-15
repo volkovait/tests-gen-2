@@ -151,6 +151,40 @@ describe('coerceMcqInLessonSpecJson', () => {
     expect(out.parts[0].exercises[0].questions[1].correctKey).toBe('B')
   })
 
+  it('не подхватывает строки со слэшем из readingPassage.paragraphs как общие варианты', () => {
+    const raw = {
+      version: 1 as const,
+      title: 'T',
+      parts: [
+        {
+          title: 'P',
+          exercises: [
+            {
+              title: 'Reading',
+              instruction: 'Answer based on the text.',
+              inputKind: 'radio' as const,
+              readingPassage: {
+                paragraphs: [
+                  'London is old.\nLondon / Paris / Berlin would be wrongly parsed if paragraphs were in the hint.',
+                ],
+              },
+              questions: [
+                {
+                  id: 'q1',
+                  prompt: 'London is a city.',
+                  correctKey: 'A',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    coerceMcqInLessonSpecJson(raw)
+    const question = raw.parts[0].exercises[0].questions[0] as Record<string, unknown>
+    expect(question.options).toBeUndefined()
+  })
+
   it('не трогает wordOrder', () => {
     const raw = {
       version: 1 as const,

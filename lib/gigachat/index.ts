@@ -3,6 +3,9 @@ export {
   getGigaChatApiUrl,
   getGigaChatCaCertPath,
   getGigaChatModel,
+  getGigaChatModelPlanner,
+  getGigaChatModelRepair,
+  getGigaChatModelSpec,
   getGigaChatOAuthUrl,
   getGigaChatScope,
 } from './config'

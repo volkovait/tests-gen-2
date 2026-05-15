@@ -62,7 +62,7 @@ export const LABELS = {
   CREATE_ERROR_EMPTY: 'Пустой ответ',
   CREATE_ERROR_GENERIC: 'Ошибка',
   CREATE_ERROR_GENERATION: 'Ошибка генерации',
-  CREATE_ERROR_NEED_MESSAGE: 'Сначала напишите хотя бы одно сообщение.',
+  CREATE_ERROR_NEED_MESSAGE: 'Нужен текст материала, сообщение в чате или загруженный файл.',
   CREATE_HINT_EXAMPLE: 'Опишите свою идею, например: «тест по временам немецкого для A2, тема путешествия».',
   CREATE_ASSISTANT_TYPING: 'Ассистент пишет…',
   CREATE_PLACEHOLDER_MESSAGE: 'Ваше сообщение…',
@@ -110,7 +110,8 @@ export const LABELS = {
   LESSON_PARTIAL_VALIDATION_ALERT_TITLE: 'Часть заданий не попала в тест',
   LESSON_PARTIAL_VALIDATION_ALERT_INTRO:
     'Ниже перечислены элементы, которые не прошли проверку формата и были исключены. Остальные задания сохранены в тесте.',
-
+  LESSON_PARTIAL_BANNER_DISMISS: 'Закрыть',
+  LESSON_PARTIAL_BANNER_DETAILS: 'Подробнее',
   HISTORY_SUBTITLE: 'Созданные интерактивные тесты',
   HISTORY_NEW_LESSON: 'Новый тест',
   HISTORY_FILE_BUTTON: 'Из PDF или фото',
@@ -237,4 +238,35 @@ export const LABELS = {
   API_GENERATE_NO_FILE: 'Файл не передан',
   API_GENERATE_PDF_EXTRACT_FAILED: 'Не удалось извлечь текст из PDF',
   API_GENERATE_UNSUPPORTED_FILE: 'Поддерживаются PDF и изображения',
+
+  LESSON_RUN_MATERIAL_SLOT: 'Материал',
+  LESSON_RUN_MATERIAL_HINT:
+    'Вставьте текст или загрузите файлы — сценарий (план урока или сразу тест) выберет модель по содержанию.',
+  LESSON_RUN_START: 'Запустить генерацию',
+  LESSON_RUN_SEND_RESUME: 'Продолжить',
+  LESSON_RUN_PLAN_LABEL: 'Правки к плану (оставьте пустым, чтобы принять как есть)',
+  LESSON_RUN_ANSWERS_LABEL: 'Правильные ответы (свободная форма)',
+  LESSON_RUN_AUTO_BUTTON: 'Авто-ответы модели (точность не гарантируется)',
+  LESSON_RUN_PREFER_AUTO_ANSWERS:
+    'Сразу авто-ответы модели: не спрашивать эталонные ответы (точность не гарантируется)',
+  LESSON_RUN_ANSWERS_MODE_MANUAL: 'Ввести ответы',
+  LESSON_RUN_ANSWERS_MODE_AUTO: 'Автоответы',
+  LESSON_RUN_LOG_TITLE: 'Шаги',
+  LESSON_RUN_DROP_MATERIAL: 'PDF или изображения — можно несколько файлов',
+  LESSON_RUN_CLEAR_FILES: 'Очистить файлы',
+  LESSON_RUN_BUSY_HINT_TITLE: 'Генерация займёт около 2 минут',
+  LESSON_RUN_BUSY_HINT_SUBTITLE:
+    'Самый длинный шаг — сборка JSON-спецификации теста. Не закрывайте вкладку, шаги обновляются ниже.',
+
+  /** Текст, если отдельный vision-запрос к API по фото не удался или вернул пусто. */
+  AGENT_IMAGE_DESCRIPTION_FALLBACK_INTRO:
+    'Пользователь загрузил изображение учебного материала, но автоматическое распознавание недоступно или не сработало.',
+  AGENT_IMAGE_DESCRIPTION_FALLBACK_HINT:
+    'Опишите в чате тему и язык теста или пришлите текст/скрин с чётким заданием — тогда мы сможем собрать тест.',
+
+  /**
+   * Фиксированный ответ при низкой релевантности материала (резерв, если модель не вернула текст).
+   */
+  LESSON_FEASIBILITY_FALLBACK_MESSAGE:
+    'Из этого материала мы не можем уверенно собрать интерактивный тест. Пришлите, пожалуйста, учебный текст, готовые вопросы или более подробное описание темы.',
 } as const

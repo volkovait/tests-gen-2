@@ -7,13 +7,22 @@ import { LABELS } from "@/lib/consts"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ExternalLink, Loader2, Pencil } from "lucide-react"
+import { LessonPartialValidationBanner } from "@/components/lesson-partial-validation-banner"
+import type { LessonSourceType } from "@/lib/lessons/save-lesson"
 
 interface LearnViewClientProps {
   lessonId: string
   lessonTitle: string
+  sourceType: LessonSourceType
+  validationWarnings: readonly string[]
 }
 
-export function LearnViewClient({ lessonId, lessonTitle }: LearnViewClientProps) {
+export function LearnViewClient({
+  lessonId,
+  lessonTitle,
+  sourceType,
+  validationWarnings,
+}: LearnViewClientProps) {
   const router = useRouter()
   const docUrl = `/learn/${lessonId}/document`
   const [editMode, setEditMode] = useState(false)
@@ -38,12 +47,6 @@ export function LearnViewClient({ lessonId, lessonTitle }: LearnViewClientProps)
       if (!res.ok) throw new Error(data.error || LABELS.LEARN_EDIT_ERROR_GENERIC)
       if (typeof data.title === "string" && data.title.length > 0) {
         setHeaderTitle(data.title)
-      }
-      const warns = Array.isArray(data.validationWarnings) ? data.validationWarnings : []
-      if (warns.length > 0 && typeof window !== "undefined") {
-        window.alert(
-          `${LABELS.LESSON_PARTIAL_VALIDATION_ALERT_TITLE}\n\n${LABELS.LESSON_PARTIAL_VALIDATION_ALERT_INTRO}\n\n${warns.join("\n\n")}`,
-        )
       }
       setInstruction("")
       setEditMode(false)
@@ -129,6 +132,12 @@ export function LearnViewClient({ lessonId, lessonTitle }: LearnViewClientProps)
               </div>
             </div>
           ) : null}
+
+          <LessonPartialValidationBanner
+            lessonId={lessonId}
+            sourceType={sourceType}
+            validationWarnings={validationWarnings}
+          />
 
           <iframe
             key={iframeKey}

@@ -109,6 +109,123 @@ describe('lessonSpecFromModelSchema', () => {
     expect(r.success).toBe(true)
   })
 
+  it('accepts checkbox with correctKeys', () => {
+    const r = lessonSpecFromModelSchema.safeParse({
+      version: 1,
+      title: 'CB',
+      parts: [
+        {
+          title: 'P',
+          exercises: [
+            {
+              title: 'E',
+              inputKind: 'checkbox',
+              questions: [
+                {
+                  id: 'c1',
+                  prompt: 'Pick all',
+                  options: [
+                    { key: 'A', text: 'one' },
+                    { key: 'B', text: 'two' },
+                  ],
+                  correctKeys: ['A', 'B'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('accepts gapDrag with template and token', () => {
+    const r = lessonSpecFromModelSchema.safeParse({
+      version: 1,
+      title: 'G',
+      parts: [
+        {
+          title: 'P',
+          exercises: [
+            {
+              title: 'E',
+              inputKind: 'gapDrag',
+              questions: [
+                {
+                  id: 'g1',
+                  prompt: 'Fill gap',
+                  gapTemplate: 'The cat ___ on the mat.',
+                  wordBank: ['sat', 'runs', 'jumps'],
+                  gapCorrectToken: 'sat',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('accepts gapDrag with multiple gaps and gapCorrectTokens', () => {
+    const r = lessonSpecFromModelSchema.safeParse({
+      version: 1,
+      title: 'G2',
+      parts: [
+        {
+          title: 'P',
+          exercises: [
+            {
+              title: 'E',
+              inputKind: 'gapDrag',
+              questions: [
+                {
+                  id: 'g_multi',
+                  prompt: 'Complete',
+                  gapTemplate: 'A: ___ me? ___ you two coffees?',
+                  wordBank: ['Excuse', 'Can', 'I', 'get'],
+                  gapCorrectTokens: ['Excuse', 'Can'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('accepts matchPairs with stems and keys', () => {
+    const r = lessonSpecFromModelSchema.safeParse({
+      version: 1,
+      title: 'M',
+      parts: [
+        {
+          title: 'P',
+          exercises: [
+            {
+              title: 'E',
+              inputKind: 'matchPairs',
+              questions: [
+                {
+                  id: 'm1',
+                  prompt: 'Match the halves',
+                  matchLeftItems: ['Natalia starts', 'We leave'],
+                  matchRightOptions: [
+                    { key: 'A', text: 'home at about 8.30 a.m.' },
+                    { key: 'B', text: 'late at weekends.' },
+                  ],
+                  matchCorrectKeys: ['B', 'A'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    expect(r.success).toBe(true)
+  })
+
   it('rejects correctKey not in options', () => {
     const r = lessonSpecFromModelSchema.safeParse({
       version: 1,

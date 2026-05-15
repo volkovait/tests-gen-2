@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     const { data: lesson, error } = await supabase
       .from('lessons')
-      .select('id, title, html_body, meta')
+      .select('id, title, html_body, meta, source_type')
       .eq('id', parsed.data.lessonId)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -66,6 +66,10 @@ export async function POST(request: Request) {
         ? (lesson.meta as Record<string, unknown>)
         : {}
 
+    const sourceType = lesson.source_type
+    const partialFileSource =
+      sourceType === 'pdf' || sourceType === 'image' ? (sourceType as 'pdf' | 'image') : null
+
     const { error: upErr } = await supabase
       .from('lessons')
       .update({
@@ -76,6 +80,7 @@ export async function POST(request: Request) {
           ...prevMeta,
           lastAiEditAt: new Date().toISOString(),
           ...(validationWarnings.length > 0 ? { validationWarnings } : {}),
+          ...(validationWarnings.length > 0 && partialFileSource !== null ? { partialSourceIngest: true } : {}),
         },
       })
       .eq('id', parsed.data.lessonId)

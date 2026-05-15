@@ -11,6 +11,8 @@ export async function saveLessonRow(
     sourceFilename: string | null
     htmlBody: string
     meta?: Record<string, unknown>
+    specJson?: Record<string, unknown> | null
+    generationRunId?: string | null
   },
 ): Promise<string> {
   const { data, error } = await supabase
@@ -22,6 +24,8 @@ export async function saveLessonRow(
       source_filename: input.sourceFilename,
       html_body: input.htmlBody,
       meta: input.meta ?? {},
+      spec_json: input.specJson ?? null,
+      generation_run_id: input.generationRunId ?? null,
     })
     .select('id')
     .single()

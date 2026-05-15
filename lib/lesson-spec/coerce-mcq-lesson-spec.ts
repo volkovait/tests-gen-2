@@ -181,6 +181,11 @@ function coerceCorrectKeyAlias(q: Record<string, unknown>): void {
   }
 }
 
+/**
+ * Только короткие служебные поля упражнения — не целиком readingPassage.paragraphs.
+ * Иначе эвристики «строка с /» из учебного текста ошибочно становятся общими options
+ * для всех вопросов (ломает явный true/false и другие форматы).
+ */
 function buildExerciseMcqHintText(ex: Record<string, unknown>): string {
   const chunks: string[] = []
   if (typeof ex.title === 'string' && ex.title.trim()) chunks.push(ex.title.trim())
@@ -189,11 +194,6 @@ function buildExerciseMcqHintText(ex: Record<string, unknown>): string {
   if (isRecord(rp)) {
     if (typeof rp.title === 'string' && rp.title.trim()) chunks.push(rp.title.trim())
     if (typeof rp.instruction === 'string' && rp.instruction.trim()) chunks.push(rp.instruction.trim())
-    if (Array.isArray(rp.paragraphs)) {
-      for (const p of rp.paragraphs) {
-        if (typeof p === 'string' && p.trim()) chunks.push(p.trim())
-      }
-    }
   }
   return chunks.join('\n')
 }
@@ -218,7 +218,7 @@ export function coerceMcqInLessonSpecJson(value: unknown): void {
     if (!Array.isArray(exercises)) continue
     for (const ex of exercises) {
       if (!isRecord(ex)) continue
-      if (ex.inputKind === 'wordOrder') continue
+      if (ex.inputKind === 'wordOrder' || ex.inputKind === 'gapDrag' || ex.inputKind === 'matchPairs') continue
       const questions = ex.questions
       if (!Array.isArray(questions)) continue
       for (const q of questions) {

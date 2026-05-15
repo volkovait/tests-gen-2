@@ -106,7 +106,10 @@ flowchart LR
 | `GIGACHAT_PREENCODED_CLIENT_SECRET` / `GIGACHAT_CLIENT_SECRET_IS_AUTHORIZATION_KEY` | флаги поведения для ключа                                                                                              |
 | `GIGACHAT_OAUTH_URL` / `GIGACHAT_API_URL`                                           | необязательно, есть значения по умолчанию (Sber)                                                                       |
 | `GIGACHAT_OAUTH_SCOPE` / `GIGACHAT_SCOPE`                                           | область OAuth, по умолчанию `GIGACHAT_API_PERS`                                                                        |
-| `GIGACHAT_MODEL`                                                                    | модель, по умолчанию `GigaChat`                                                                                        |
+| `GIGACHAT_MODEL`                                                                    | базовая модель для большинства узлов (классификация, релевантность, split, ассистент и т.д.), по умолчанию `GigaChat` |
+| `GIGACHAT_MODEL_SPEC`                                                               | опционально: модель для **первого** прохода JSON-спеки теста; если не задана — как `GIGACHAT_MODEL` (удобно поставить «Pro», оставив базовую лёгкой) |
+| `GIGACHAT_MODEL_REPAIR`                                                             | опционально: модель для **repair** JSON после Zod; если не задана — как `GIGACHAT_MODEL_SPEC` |
+| `GIGACHAT_MODEL_PLANNER`                                                            | опционально: модель для **deep agent** планировщика теста; если не задана — как `GIGACHAT_MODEL_SPEC` |
 | `GIGACHAT_CA_CERT`                                                                  | путь к PEM корня НУЦ для TLS                                                                                           |
 | `GIGACHAT_TLS_INSECURE` / `GIGACHAT_INSECURE_TLS`                                   | только вне production: отключить проверку TLS (например, корпоративный SSL)                                            |
 
@@ -124,7 +127,7 @@ pnpm dev
 
 Откройте [http://localhost:3000](http://localhost:3000).
 
-Примените SQL из `supabase/migrations/` в SQL Editor Supabase или через CLI, если проект ещё не содержит этих таблиц.
+Примените SQL из `supabase/migrations/` в SQL Editor Supabase или через CLI, если проект ещё не содержит этих таблиц. Таблица `lesson_generation_references` — курируемые «золотые» прогоны генерации (таймлайн шагов и опционально снимок `spec_json`); см. `ref/lesson-generation-references/` и `pnpm seed:generation-references`.
 
 ### Static server (опционально)
 
@@ -145,7 +148,7 @@ pnpm serve:static
 | `pnpm build` / `pnpm start` | production-сборка и запуск                                                         |
 | `pnpm test`                 | Vitest (`lib/lesson-spec/*.test.ts` и др.)                                         |
 | `pnpm lint`                 | ESLint (убедитесь, что в окружении установлены `eslint` и конфиг; см. бэклог ниже) |
-| `pnpm serve:static`         | Express static-server                                                              |
+| `pnpm seed:generation-references` | Загрузка референсов в `lesson_generation_references` (нужен `SUPABASE_SERVICE_ROLE_KEY`) |
 
 
 ## Тесты

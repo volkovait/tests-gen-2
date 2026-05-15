@@ -2,6 +2,24 @@ import { z } from 'zod'
 
 export const LESSON_SPEC_VERSION = 1 as const
 
+function gapMarkerCount(template: string): number {
+  if (!template.includes('___')) return 0
+  return template.split('___').length - 1
+}
+
+function multisetContainsEveryToken(bank: readonly string[], tokens: readonly string[]): boolean {
+  const available = new Map<string, number>()
+  for (const word of bank) {
+    available.set(word, (available.get(word) ?? 0) + 1)
+  }
+  for (const token of tokens) {
+    const next = (available.get(token) ?? 0) - 1
+    if (next < 0) return false
+    available.set(token, next)
+  }
+  return true
+}
+
 const optionSchema = z.object({
   key: z.string().min(1).max(8),
   text: z.string().min(1).max(2000),
@@ -13,7 +31,7 @@ export const readingPassageSchema = z.object({
   paragraphs: z.array(z.string().min(1).max(12000)).min(1).max(40),
 })
 
-const exerciseInputKindSchema = z.enum(['radio', 'select', 'wordOrder'])
+const exerciseInputKindSchema = z.enum(['radio', 'select', 'checkbox', 'wordOrder', 'gapDrag', 'matchPairs'])
 
 const questionSchema = z.object({
   id: z.string().min(1).max(80),
@@ -21,8 +39,22 @@ const questionSchema = z.object({
   options: z.array(optionSchema).optional(),
   /** До normalize допускаем длинный ответ (текст варианта); потом сжимается к A/B/… */
   correctKey: z.string().min(1).max(2000).optional(),
+  /** Множественный выбор: набор ключей вариантов (после normalize — буквы A, B, …) */
+  correctKeys: z.array(z.string().min(1).max(80)).min(1).max(20).optional(),
   wordBank: z.array(z.string().min(1).max(200)).max(40).optional(),
   correctSentence: z.string().min(1).max(2000).optional(),
+  /** Шаблон с маркерами пропуска «___» для gapDrag (один или несколько пропусков в одном предложении/диалоге) */
+  gapTemplate: z.string().min(1).max(4000).optional(),
+  /** Одно слово из wordBank для gapTemplate с ровно одним «___» */
+  gapCorrectToken: z.string().min(1).max(200).optional(),
+  /** Слова из wordBank по порядку слева направо для каждого «___» в gapTemplate (несколько пропусков) */
+  gapCorrectTokens: z.array(z.string().min(1).max(200)).max(40).optional(),
+  /** Сопоставление (matchPairs): левая колонка (начала фраз), фиксированный порядок */
+  matchLeftItems: z.array(z.string().min(1).max(2000)).max(40).optional(),
+  /** Правая колонка: варианты с ключами A, B, C… (перетаскиваются в слоты слева) */
+  matchRightOptions: z.array(optionSchema).max(40).optional(),
+  /** Для каждого элемента matchLeftItems — ключ верного варианта из matchRightOptions */
+  matchCorrectKeys: z.array(z.string().min(1).max(8)).max(40).optional(),
 })
 
 const exerciseSchema = z.object({
@@ -97,6 +129,150 @@ export const lessonSpecFromModelSchema = z
                 message: 'Для wordOrder нужен correctSentence',
                 path: [...qPath, 'correctSentence'],
               })
+            }
+          } else if (kind === 'gapDrag') {
+            const bank = q.wordBank
+            if (!bank || bank.length < 2) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Для gapDrag нужен wordBank из минимум 2 слов',
+                path: [...qPath, 'wordBank'],
+              })
+            }
+            const template = q.gapTemplate?.trim() ?? ''
+            if (!template.includes('___')) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Для gapDrag в gapTemplate должен быть хотя бы один маркер пропуска ___',
+                path: [...qPath, 'gapTemplate'],
+              })
+            }
+            const gaps = gapMarkerCount(template)
+            if (gaps === 0) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Не удалось разобрать пропуски ___ в gapTemplate',
+                path: [...qPath, 'gapTemplate'],
+              })
+            } else if (gaps === 1) {
+              if (q.gapCorrectTokens && q.gapCorrectTokens.length > 1) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message:
+                    'Для одного пропуска задайте либо gapCorrectToken, либо массив gapCorrectTokens из ровно одного элемента',
+                  path: [...qPath, 'gapCorrectTokens'],
+                })
+              }
+              const fromArray = q.gapCorrectTokens
+              let token = ''
+              if (fromArray && fromArray.length === 1) {
+                token = fromArray[0]?.trim() ?? ''
+              }
+              if (!token) {
+                token = q.gapCorrectToken?.trim() ?? ''
+              }
+              if (!token) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: 'Для gapDrag с одним пропуском нужен gapCorrectToken или gapCorrectTokens из одного элемента',
+                  path: [...qPath, 'gapCorrectToken'],
+                })
+              } else if (bank && !multisetContainsEveryToken(bank, [token])) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: 'gapCorrectToken должен встречаться в wordBank (с учётом повторов)',
+                  path: [...qPath, 'gapCorrectToken'],
+                })
+              }
+            } else {
+              const picks = q.gapCorrectTokens
+              if (!picks || picks.length !== gaps) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message:
+                    `Для gapDrag с ${String(gaps)} пропусками нужен gapCorrectTokens длиной ${String(gaps)} (порядок слева направо)`,
+                  path: [...qPath, 'gapCorrectTokens'],
+                })
+              } else if (bank && !multisetContainsEveryToken(bank, picks)) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: 'Каждый элемент gapCorrectTokens должен быть взят из wordBank (мульти-множество)',
+                  path: [...qPath, 'gapCorrectTokens'],
+                })
+              }
+            }
+          } else if (kind === 'matchPairs') {
+            const leftItems = q.matchLeftItems ?? []
+            const rightOpts = q.matchRightOptions ?? []
+            const corr = q.matchCorrectKeys ?? []
+            if (leftItems.length < 2) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Для matchPairs нужно минимум 2 строки в matchLeftItems',
+                path: [...qPath, 'matchLeftItems'],
+              })
+            }
+            if (rightOpts.length < 2) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Для matchPairs нужно минимум 2 варианта в matchRightOptions',
+                path: [...qPath, 'matchRightOptions'],
+              })
+            }
+            if (corr.length !== leftItems.length || leftItems.length === 0) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Длина matchCorrectKeys должна совпадать с числом matchLeftItems',
+                path: [...qPath, 'matchCorrectKeys'],
+              })
+            }
+            for (let ck = 0; ck < corr.length; ck += 1) {
+              const want = corr[ck]?.trim() ?? ''
+              if (!want) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: 'matchCorrectKeys не должен содержать пустых значений',
+                  path: [...qPath, 'matchCorrectKeys'],
+                })
+                continue
+              }
+              const resolvedKey = rightOpts.some(
+                (optionRow) => optionRow.key === want || optionRow.text.trim().toLowerCase() === want.toLowerCase(),
+              )
+              if (!resolvedKey) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: `matchCorrectKeys[${String(ck)}]="${want}" не соответствует ни одному ключу/text в matchRightOptions`,
+                  path: [...qPath, 'matchCorrectKeys'],
+                })
+              }
+            }
+          } else if (kind === 'checkbox') {
+            const opts = q.options
+            if (!opts || opts.length < 2) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Для checkbox нужны options (минимум 2)',
+                path: [...qPath, 'options'],
+              })
+            }
+            const keys = q.correctKeys
+            if (!keys || keys.length < 1) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Для checkbox нужен correctKeys (минимум 1 ключ)',
+                path: [...qPath, 'correctKeys'],
+              })
+            } else if (opts) {
+              for (const key of keys) {
+                if (!opts.some((o) => o.key === key || o.text.trim().toLowerCase() === key.trim().toLowerCase())) {
+                  ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `correctKeys содержит неизвестный ключ "${key}"`,
+                    path: [...qPath, 'correctKeys'],
+                  })
+                }
+              }
             }
           } else {
             const opts = q.options

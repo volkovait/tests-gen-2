@@ -1,14 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAssistantRequestLogDir } from '@/lib/gigachat/model-request-log'
-import { gigachatChatCompletion } from '@/lib/gigachat'
+import { llmChatCompletion } from '@/lib/llm/chat-completion'
 import { lessonAssistantBodySchema } from '@/lib/lesson-meta'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
 
-const ASSISTANT_SYSTEM = `Ты — дружелюбный ассистент Lingua-Bloom по созданию языковых тестов.
-Помоги пользователю уточнить тему, уровень (A1–C2), целевой язык и формат заданий. Отвечай по-русски, кратко (2–5 предложений или немного пунктов). Не генерируй HTML — только диалог.`
+const ASSISTANT_SYSTEM = `Ты — дружелюбный ассистент Lingua-Bloom по созданию интерактивных уроков по иностранному языку и другим предметам. Пользователь предоставит тебе материал либо уже с тестами, либо без. Твоя задача - преобразовать этот материал в готовую интерактивную страницу.`
 
 export async function POST(request: Request) {
   try {
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
 
     const messages = [{ role: 'system' as const, content: ASSISTANT_SYSTEM }, ...parsed.data.messages]
     const assistantLogDir = await createAssistantRequestLogDir()
-    const reply = await gigachatChatCompletion(messages, {
+    const reply = await llmChatCompletion(messages, {
       temperature: 0.7,
       maxTokens: 1024,
       ...(assistantLogDir

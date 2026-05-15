@@ -1,3 +1,5 @@
+import { assertLessonGenerationFeasible } from '@/lib/agents/feasibility-check'
+import { runLessonPlannerDeepAgent } from '@/lib/agents/lesson-planner-deep-agent'
 import { buildLessonHtmlFromSpec } from '@/lib/html-lesson/build-lesson-html'
 import { generateValidatedLessonSpec } from '@/lib/lesson-spec/generate-lesson-spec'
 import { lessonSpecSchema, type LessonSpec } from '@/lib/lesson-spec/schema'
@@ -24,11 +26,43 @@ export async function generateInteractiveHtmlLesson(params: {
   correctAnswersHint?: string
   /** Логи вызова модели: `generate-spec.txt` в этой папке. */
   logDir?: string
-}): Promise<{ html: string; validationWarnings: string[] }> {
+}): Promise<{ html: string; validationWarnings: string[]; spec: LessonSpec }> {
+  await assertLessonGenerationFeasible({
+    title: params.title,
+    materialSummary: params.materialSummary,
+    ...(params.correctAnswersHint?.trim()
+      ? { correctAnswersHint: params.correctAnswersHint.trim() }
+      : {}),
+  })
+
+  let plannerBrief = ''
+  try {
+    plannerBrief = await runLessonPlannerDeepAgent(
+      [
+        `Название/тема: ${params.title.trim() || '(не указано)'}`,
+        '',
+        params.materialSummary.trim(),
+        '',
+        params.correctAnswersHint?.trim()
+          ? `Подсказки по ответам:\n${params.correctAnswersHint.trim()}`
+          : '',
+      ]
+        .filter((line) => line.length > 0)
+        .join('\n'),
+    )
+  } catch (error) {
+    console.error('[generateInteractiveHtmlLesson] lesson planner deep agent failed', error)
+  }
+
+  const materialWithPlanner =
+    plannerBrief.trim().length > 0
+      ? `${params.materialSummary.trim()}\n\n## Бриф планировщика (deep agent)\n${plannerBrief.trim()}`
+      : params.materialSummary
+
   const { spec, validationWarnings } = await generateValidatedLessonSpec({
     kind: 'create',
     title: params.title,
-    materialSummary: params.materialSummary,
+    materialSummary: materialWithPlanner,
     ...(params.correctAnswersHint?.trim()
       ? { correctAnswersHint: params.correctAnswersHint.trim() }
       : {}),
@@ -41,7 +75,7 @@ export async function generateInteractiveHtmlLesson(params: {
   if (enc.length > MAX_HTML_BYTES) {
     throw new Error('Сгенерированный HTML слишком большой')
   }
-  return { html, validationWarnings }
+  return { html, validationWarnings, spec: specWithTitle }
 }
 
 export async function generateInteractiveHtmlLessonFromEdit(params: {
