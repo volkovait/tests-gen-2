@@ -6,6 +6,7 @@ import {
 import { generateInteractiveHtmlLessonFromEdit } from '@/lib/lessons/generate-interactive-html'
 import { stripHtmlTags } from '@/lib/lesson-spec/sanitize-lesson-text'
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -42,12 +43,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON', details: parsed.error.flatten() }, { status: 400 })
     }
 
-    const { data: lesson, error } = await supabase
+    let lessonSelect = supabase
       .from('lessons')
       .select('id, title, html_body, meta, source_type')
       .eq('id', parsed.data.lessonId)
-      .eq('user_id', user.id)
-      .maybeSingle()
+    if (user !== null) {
+      lessonSelect = lessonSelect.eq('user_id', user.id)
+    }
+    const { data: lesson, error } = await lessonSelect.maybeSingle()
 
     if (error || !lesson?.html_body || typeof lesson.title !== 'string') {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
@@ -70,7 +73,7 @@ export async function POST(request: Request) {
     const partialFileSource =
       sourceType === 'pdf' || sourceType === 'image' ? (sourceType as 'pdf' | 'image') : null
 
-    const { error: upErr } = await supabase
+    let lessonUpdate = supabase
       .from('lessons')
       .update({
         html_body: html,
@@ -84,7 +87,10 @@ export async function POST(request: Request) {
         },
       })
       .eq('id', parsed.data.lessonId)
-      .eq('user_id', user.id)
+    if (user !== null) {
+      lessonUpdate = lessonUpdate.eq('user_id', user.id)
+    }
+    const { error: upErr } = await lessonUpdate
 
     if (upErr) {
       return NextResponse.json({ error: upErr.message }, { status: 500 })

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled, resolveActingUserId } from '@/lib/auth/auth-disabled'
 import {
   appendLessonGenerationEvent,
   insertLessonGenerationRun,
@@ -28,7 +29,11 @@ export async function POST(request: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const actingUserId = resolveActingUserId(user)
+    if (actingUserId === undefined) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
 
     await insertLessonGenerationRun(supabase, {
       runId,
-      userId: user.id,
+      userId: actingUserId,
       threadId,
       mode: 'ready_material',
       title: body.title?.trim() || null,
@@ -64,7 +69,7 @@ export async function POST(request: Request) {
 
     const result = await invokeLessonGenerationGraph({
       supabase,
-      userId: user.id,
+      userId: actingUserId,
       runId,
       threadId,
       initialState: {

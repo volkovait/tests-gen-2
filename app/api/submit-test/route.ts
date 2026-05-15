@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthDisabled, resolveActingUserId } from "@/lib/auth/auth-disabled"
 import { NextRequest, NextResponse } from "next/server"
 
 interface Answer {
@@ -12,7 +13,11 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const actingUserId = resolveActingUserId(user)
+    if (actingUserId === undefined) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user owns this test
-    if (test.user_id !== user.id) {
+    if (user !== null && test.user_id !== user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -76,7 +81,7 @@ export async function POST(request: NextRequest) {
       .from("test_attempts")
       .insert({
         test_id: testId,
-        user_id: user.id,
+        user_id: actingUserId,
         answers: gradedAnswers,
         score: correctCount,
         total_questions: totalQuestions,

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthDisabled, resolveActingUserId } from "@/lib/auth/auth-disabled"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function DELETE(
@@ -9,9 +10,8 @@ export async function DELETE(
     const { id } = await params
     const supabase = await createClient()
     
-    // Check authentication
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -26,7 +26,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Test not found" }, { status: 404 })
     }
 
-    if (test.user_id !== user.id) {
+    if (user !== null && test.user_id !== user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -60,18 +60,20 @@ export async function GET(
     const { id } = await params
     const supabase = await createClient()
     
-    // Check authentication
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { data: test, error } = await supabase
+    let testQuery = supabase
       .from("tests")
       .select("*")
       .eq("id", id)
-      .eq("user_id", user.id)
-      .single()
+    if (user !== null) {
+      testQuery = testQuery.eq("user_id", user.id)
+    }
+
+    const { data: test, error } = await testQuery.single()
 
     if (error || !test) {
       return NextResponse.json({ error: "Test not found" }, { status: 404 })

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthDisabled } from "@/lib/auth/auth-disabled"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
@@ -26,15 +27,20 @@ export default async function HistoryPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (!isAuthDisabled() && !user) {
     redirect("/auth/login")
   }
 
-  const lessonsRes = await supabase
-    .from("lessons")
-    .select("id, title, source_type, source_filename, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
+  const userId = user?.id ?? null
+
+  const lessonsRes =
+    userId !== null
+      ? await supabase
+          .from("lessons")
+          .select("id, title, source_type, source_filename, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+      : { data: [], error: null as null }
 
   const lessonsList = lessonsRes.error ? [] : lessonsRes.data ?? []
 

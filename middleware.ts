@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { updateSession } from '@/lib/supabase/proxy'
 
 const protectedRoutes = [
@@ -32,7 +33,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
-  if (isProtectedRoute && !user) {
+  if (!isAuthDisabled() && isProtectedRoute && !user) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('next', pathname)
     const redirectResponse = NextResponse.redirect(loginUrl)

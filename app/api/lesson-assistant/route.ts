@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { createAssistantRequestLogDir } from '@/lib/gigachat/model-request-log'
 import { llmChatCompletion } from '@/lib/llm/chat-completion'
 import { lessonAssistantBodySchema } from '@/lib/lesson-meta'
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -8,7 +8,7 @@
  * непустое значение явно.
  *
  * Переменные без `NEXT_PUBLIC_` в middleware (Edge) обычно недоступны; ключ
- * должен попасть в билд через `NEXT_PUBLIC_*` и `build.env_file` в compose.
+ * должен попасть в билд через `NEXT_PUBLIC_*` и build-args в docker-compose.
  */
 function firstNonEmptyEnv(...candidates: Array<string | undefined>): string | undefined {
   for (const candidate of candidates) {

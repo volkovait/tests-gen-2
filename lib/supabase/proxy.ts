@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import type { User } from '@supabase/supabase-js'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -49,6 +50,7 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
   } = await supabase.auth.getUser()
 
   if (
+    !isAuthDisabled() &&
     // if the user is not logged in and the app path, in this case, /protected, is accessed, redirect to the login page
     request.nextUrl.pathname.startsWith('/protected') &&
     !user
