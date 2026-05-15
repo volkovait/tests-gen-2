@@ -17,11 +17,11 @@ export type GigachatChatLogOptions = {
 
 export async function gigachatChatCompletion(
   messages: GigaChatMessage[],
-  options?: { temperature?: number; maxTokens?: number; log?: GigachatChatLogOptions },
+  options?: { temperature?: number; maxTokens?: number; log?: GigachatChatLogOptions; model?: string },
 ): Promise<string> {
   const token = await getGigaChatAccessToken()
   const url = gigachatChatCompletionsUrl()
-  const model = getGigaChatModel()
+  const model = options?.model?.trim() || getGigaChatModel()
 
   const temperature = options?.temperature ?? 0.3
   const max_tokens = options?.maxTokens ?? 4096

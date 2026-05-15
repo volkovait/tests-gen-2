@@ -403,6 +403,44 @@ body.test-locked select.answer-select {
   color: var(--muted);
 }
 
+.gap-drag-wrap .gap-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.35rem;
+  line-height: 1.75;
+}
+
+.match-pairs-wrap {
+  margin-top: 0.5rem;
+}
+
+.match-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.match-stem-num {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.match-stem-text {
+  flex: 1 1 40%;
+  min-width: 140px;
+}
+
+.match-slot {
+  flex: 1 1 220px;
+  min-height: 2.75rem;
+  margin-bottom: 0;
+}
+
 body.test-locked .wo-chip {
   cursor: default;
 }

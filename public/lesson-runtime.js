@@ -107,11 +107,101 @@
     return String(key) + ") (нет ответа)";
   }
 
+  function gapSlotsCountFromTemplate(template) {
+    var inner = String(template || "");
+    if (inner.indexOf("___") < 0) return 0;
+    return inner.split("___").length - 1;
+  }
+
+  /** Эталонные слова в пропусках (порядок слева направо); для совместимости один пропуск — gapCorrectToken. */
+  function gapDragReferenceTokens(question) {
+    var slots = gapSlotsCountFromTemplate(question.gapTemplate || "");
+    if (slots <= 1) {
+      var compact = question.gapCorrectTokens;
+      if (compact && compact.length === 1 && String(compact[0]).trim()) {
+        return [String(compact[0]).trim()];
+      }
+      var only = question.gapCorrectToken ? String(question.gapCorrectToken).trim() : "";
+      return only ? [only] : [];
+    }
+    var list = question.gapCorrectTokens || [];
+    var aggregated = [];
+    for (var listIndex = 0; listIndex < list.length; listIndex += 1) {
+      aggregated.push(String(list[listIndex]).trim());
+    }
+    return aggregated;
+  }
+
+  function parseGapDragAnswerStored(rawStored, slots) {
+    var blanks = [];
+    for (var fillIndex = 0; fillIndex < slots; fillIndex += 1) blanks.push("");
+    var trimmed =
+      rawStored === undefined || rawStored === null ? "" : String(rawStored).trim();
+    if (!trimmed) return blanks;
+    try {
+      var jsonParsed = JSON.parse(trimmed);
+      if (Array.isArray(jsonParsed) && jsonParsed.length === slots) {
+        var rebuilt = [];
+        for (var jsonIdx = 0; jsonIdx < jsonParsed.length; jsonIdx += 1) {
+          rebuilt.push(String(jsonParsed[jsonIdx]).trim());
+        }
+        return rebuilt;
+      }
+    } catch (_) {
+      /* один пропуск: старые сохранения как голый текст */
+    }
+    if (slots === 1) return [trimmed];
+    return blanks;
+  }
+
+  function gapChosenDisplayed(placeholders) {
+    var fragments = [];
+    for (var displayIndex = 0; displayIndex < placeholders.length; displayIndex += 1) {
+      fragments.push(placeholders[displayIndex] ? placeholders[displayIndex] : "___");
+    }
+    return fragments.join(" · ");
+  }
+
+  function gapSlotCountEffective(question) {
+    var numbered = gapSlotsCountFromTemplate(question.gapTemplate || "");
+    return numbered > 0 ? numbered : 1;
+  }
+
   function correctAnswerDisplay(item) {
     var q = item.q;
     var inputKind = item.inputKind;
     if (inputKind === "wordOrder" && q.correctSentence) {
       return q.correctSentence;
+    }
+    if (inputKind === "gapDrag") {
+      var refs = gapDragReferenceTokens(q);
+      if (!refs.length) return "—";
+      return refs.join(" · ");
+    }
+    if (inputKind === "matchPairs") {
+      var stems = q.matchLeftItems || [];
+      var corr = q.matchCorrectKeys || [];
+      var rightOpts = q.matchRightOptions || [];
+      if (!stems.length || !corr.length) return "—";
+      var matchBits = [];
+      for (var stemLoop = 0; stemLoop < stems.length; stemLoop += 1) {
+        var answerKey = corr[stemLoop];
+        matchBits.push(
+          String(stemLoop + 1) +
+            ") " +
+            stems[stemLoop] +
+            " → " +
+            (rightOpts.length ? formatAnswerLine(String(answerKey), rightOpts) : String(answerKey)),
+        );
+      }
+      return matchBits.join("; ");
+    }
+    if (inputKind === "checkbox" && q.correctKeys && q.correctKeys.length && q.options) {
+      var parts = [];
+      for (var ci = 0; ci < q.correctKeys.length; ci += 1) {
+        parts.push(formatAnswerLine(q.correctKeys[ci], q.options));
+      }
+      return parts.join("; ");
     }
     if (q.correctKey && q.options) {
       return formatAnswerLine(q.correctKey, q.options);
@@ -126,6 +216,18 @@
       .trim();
   }
 
+  function sortKeysString(keysStr) {
+    if (!keysStr || typeof keysStr !== "string") return "";
+    return keysStr
+      .split(",")
+      .map(function (k) {
+        return k.trim();
+      })
+      .filter(Boolean)
+      .sort()
+      .join(",");
+  }
+
   function isAnswerCorrect(item, chosen) {
     var q = item.q;
     var inputKind = item.inputKind;
@@ -133,6 +235,35 @@
       var c = q.correctSentence ? normalizeSentence(q.correctSentence) : "";
       var s = chosen ? normalizeSentence(chosen) : "";
       return c.length > 0 && c === s;
+    }
+    if (inputKind === "gapDrag") {
+      var refTokens = gapDragReferenceTokens(q);
+      if (!refTokens.length) return false;
+      var picked = parseGapDragAnswerStored(chosen, refTokens.length);
+      if (picked.length !== refTokens.length) return false;
+      for (var refLoop = 0; refLoop < refTokens.length; refLoop += 1) {
+        if (String(picked[refLoop]).trim() !== String(refTokens[refLoop]).trim()) return false;
+      }
+      return true;
+    }
+    if (inputKind === "matchPairs") {
+      var refMatch = q.matchCorrectKeys || [];
+      var gotKeys = [];
+      try {
+        gotKeys = JSON.parse(typeof chosen === "string" ? chosen : "");
+      } catch (_) {
+        return false;
+      }
+      if (!Array.isArray(gotKeys) || gotKeys.length !== refMatch.length) return false;
+      for (var matchCmp = 0; matchCmp < refMatch.length; matchCmp += 1) {
+        if (String(refMatch[matchCmp]).trim() !== String(gotKeys[matchCmp]).trim()) return false;
+      }
+      return true;
+    }
+    if (inputKind === "checkbox" && q.correctKeys && q.correctKeys.length) {
+      var ref = sortKeysString(q.correctKeys.join(","));
+      var got = sortKeysString(chosen);
+      return ref.length > 0 && ref === got;
     }
     return chosen === (q.correctKey || "");
   }
@@ -143,6 +274,55 @@
     if (inputKind === "wordOrder") {
       return chosen.trim() === "" ? "(нет ответа)" : chosen;
     }
+    if (inputKind === "gapDrag") {
+      var slotTotalShown = gapSlotCountEffective(q);
+      var placeholdersParsed = parseGapDragAnswerStored(chosen, slotTotalShown);
+      var anyWord = placeholdersParsed.some(function (piece) {
+        return String(piece || "").trim() !== "";
+      });
+      if (!anyWord) return "(нет ответа)";
+      return gapChosenDisplayed(placeholdersParsed);
+    }
+    if (inputKind === "matchPairs") {
+      var leftStems = q.matchLeftItems || [];
+      var optionsRight = q.matchRightOptions || [];
+      var picks = [];
+      try {
+        picks = JSON.parse(typeof chosen === "string" ? chosen : "");
+      } catch (_) {
+        return "(нет ответа)";
+      }
+      if (!Array.isArray(picks)) return "(нет ответа)";
+      var nonempty = picks.some(function (letter) {
+        return String(letter || "").trim() !== "";
+      });
+      if (!nonempty) return "(нет ответа)";
+      var lines = [];
+      for (var lineIndex = 0; lineIndex < leftStems.length && lineIndex < picks.length; lineIndex += 1) {
+        var letterKey = picks[lineIndex];
+        lines.push(
+          String(lineIndex + 1) +
+            ") " +
+            (letterKey ? formatAnswerLine(String(letterKey), optionsRight) : "(пусто)"),
+        );
+      }
+      return lines.join("; ");
+    }
+    if (inputKind === "checkbox") {
+      if (!chosen || !String(chosen).trim()) return "(нет ответа)";
+      if (!q.options) return chosen;
+      var ks = String(chosen)
+        .split(",")
+        .map(function (k) {
+          return k.trim();
+        })
+        .filter(Boolean);
+      var bits = [];
+      for (var bi = 0; bi < ks.length; bi += 1) {
+        bits.push(formatAnswerLine(ks[bi], q.options));
+      }
+      return bits.join("; ");
+    }
     if (!q.options) return chosen || "(нет ответа)";
     if (chosen === "") return "(нет ответа)";
     return formatAnswerLine(chosen, q.options);
@@ -150,6 +330,10 @@
 
   var wordOrderRefreshers = {};
   var wordOrderState = {};
+  var gapDragSlotAnswers = {};
+  var gapDragRefreshers = {};
+  var matchPairsSlotKeysState = {};
+  var matchPairsRefreshers = {};
 
   function getWordOrderSentence(qid) {
     var st = wordOrderState[qid];
@@ -294,6 +478,416 @@
     wordOrderRefreshers[q.id] = renderChips;
   }
 
+  function initGapAnswersSlots(question) {
+    var totalSlots = gapSlotCountEffective(question);
+    var cleared = [];
+    for (var initIdx = 0; initIdx < totalSlots; initIdx += 1) cleared.push("");
+    gapDragSlotAnswers[question.id] = cleared;
+    return totalSlots;
+  }
+
+  function syncGapSlotsHidden(questionId, expectedLength) {
+    var el = document.getElementById("gd_hidden_" + questionId);
+    if (!el) return;
+    var working = gapDragSlotAnswers[questionId] || [];
+    var sliceLen = expectedLength > 0 ? expectedLength : working.length;
+    el.value = JSON.stringify(working.slice(0, sliceLen));
+    scheduleSave();
+  }
+
+  function renderGapDragQuestion(qEl, q) {
+    var slotCount = initGapAnswersSlots(q);
+    var wordBankMixed = shuffleCopy(q.wordBank || []);
+    var templateChunks = (q.gapTemplate || "").split("___");
+    var wrap = document.createElement("div");
+    wrap.className = "gap-drag-wrap";
+    var instr =
+      slotCount > 1
+        ? "Перетащите слова из банка в пропуски по порядку."
+        : "Перетащите подходящее слово в пропуск.";
+    wrap.innerHTML =
+      '<p class="instruction">' +
+      escapeHtml(instr) +
+      '</p>' +
+      '<div class="gap-sentence" data-gd-sentence="' +
+      escapeHtml(q.id) +
+      '"></div>' +
+      '<p class="wo-bank-label">Банк слов</p>' +
+      '<div class="wo-bank gap-bank" data-gd-bank="' +
+      escapeHtml(q.id) +
+      '"></div>' +
+      '<input type="hidden" id="gd_hidden_' +
+      escapeHtml(q.id) +
+      '" name="answer_' +
+      escapeHtml(q.id) +
+      '" value="" />';
+    qEl.appendChild(wrap);
+    var sentenceContainer = wrap.querySelector(".gap-sentence");
+    var bankContainer = wrap.querySelector(".gap-bank");
+    if (!sentenceContainer || !bankContainer) return;
+
+    bankContainer.addEventListener("dragover", function (bankOver) {
+      bankOver.preventDefault();
+    });
+    bankContainer.addEventListener("drop", function (bankDropEv) {
+      bankDropEv.preventDefault();
+      if (document.body.classList.contains("test-locked")) return;
+      var gdPay = bankDropEv.dataTransfer.getData("text/plain");
+      if (!gdPay || gdPay.indexOf("gd|") !== 0) return;
+      var gdSegs = gdPay.split("|");
+      if (gdSegs.length < 5 || gdSegs[1] !== q.id || gdSegs[2] !== "slot") return;
+      var clearedIdx = Number.parseInt(gdSegs[3], 10);
+      var activeLane = gapDragSlotAnswers[q.id];
+      if (!activeLane || !Number.isFinite(clearedIdx)) return;
+      activeLane[clearedIdx] = "";
+      renderAllGaps();
+    });
+
+    function slotTokensChosen() {
+      var row = gapDragSlotAnswers[q.id] || [];
+      var selected = [];
+      for (var pickIdx = 0; pickIdx < row.length; pickIdx += 1) {
+        if (row[pickIdx]) selected.push(row[pickIdx]);
+      }
+      return selected;
+    }
+
+    function makeTokenChip(questionIdParam, gapToken, sourceKind, gapIndexNumber) {
+      var chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "wo-chip";
+      chip.textContent = gapToken;
+      chip.draggable = true;
+      chip.addEventListener("click", function () {
+        if (document.body.classList.contains("test-locked")) return;
+        if (sourceKind === "bank") {
+          var rowState = gapDragSlotAnswers[questionIdParam];
+          if (!rowState) return;
+          var placedTo = -1;
+          for (var seek = 0; seek < rowState.length; seek += 1) {
+            if (!rowState[seek]) {
+              placedTo = seek;
+              break;
+            }
+          }
+          if (placedTo < 0) return;
+          rowState[placedTo] = gapToken;
+          renderAllGaps();
+          return;
+        }
+        if (sourceKind === "slot") {
+          var rows = gapDragSlotAnswers[questionIdParam];
+          if (!rows || gapIndexNumber < 0 || gapIndexNumber >= rows.length) return;
+          rows[gapIndexNumber] = "";
+          renderAllGaps();
+        }
+      });
+      chip.addEventListener("dragstart", function (evDrag) {
+        evDrag.dataTransfer.setData(
+          "text/plain",
+          "gd|" + questionIdParam + "|" + sourceKind + "|" + String(gapIndexNumber) + "|" + gapToken,
+        );
+        evDrag.dataTransfer.effectAllowed = "move";
+      });
+      return chip;
+    }
+
+    function attachDropHandlersForSlot(spanNode, gapPosition) {
+      spanNode.addEventListener("dragover", function (evOver) {
+        evOver.preventDefault();
+        spanNode.classList.add("wo-drag-over");
+      });
+      spanNode.addEventListener("dragleave", function () {
+        spanNode.classList.remove("wo-drag-over");
+      });
+      spanNode.addEventListener("drop", function (evDrop) {
+        evDrop.preventDefault();
+        spanNode.classList.remove("wo-drag-over");
+        if (document.body.classList.contains("test-locked")) return;
+        var payload = evDrop.dataTransfer.getData("text/plain");
+        if (!payload || payload.indexOf("gd|") !== 0) return;
+        var bits = payload.split("|");
+        if (bits.length < 5 || bits[1] !== q.id) return;
+        var sourceZone = bits[2];
+        var sourceIndexParsed = Number.parseInt(bits[3], 10);
+        var tokenMoved = bits[4] || "";
+        var lane = gapDragSlotAnswers[q.id];
+        if (!lane) return;
+        if (sourceZone === "bank") {
+          lane[gapPosition] = tokenMoved;
+        } else if (sourceZone === "slot") {
+          if (!Number.isFinite(sourceIndexParsed)) return;
+          if (sourceIndexParsed === gapPosition) return;
+          var fromToken = lane[sourceIndexParsed] || "";
+          var toToken = lane[gapPosition] || "";
+          lane[sourceIndexParsed] = toToken;
+          lane[gapPosition] = fromToken;
+        }
+        renderAllGaps();
+      });
+    }
+
+    function renderAllGaps() {
+      sentenceContainer.innerHTML = "";
+      var laneNow = gapDragSlotAnswers[q.id] || [];
+      for (var gapWalk = 0; gapWalk < slotCount; gapWalk += 1) {
+        var textBefore = document.createElement("span");
+        textBefore.textContent = templateChunks[gapWalk] || "";
+        sentenceContainer.appendChild(textBefore);
+        var slotSpan = document.createElement("span");
+        slotSpan.className = "gap-drop wo-answer";
+        slotSpan.dataset.gdDrop = q.id;
+        slotSpan.dataset.gdSlot = String(gapWalk);
+        var tokenHere = laneNow[gapWalk] || "";
+        if (tokenHere) {
+          slotSpan.appendChild(makeTokenChip(q.id, tokenHere, "slot", gapWalk));
+        } else {
+          slotSpan.textContent = "___";
+        }
+        attachDropHandlersForSlot(slotSpan, gapWalk);
+        sentenceContainer.appendChild(slotSpan);
+      }
+      var tailPart = document.createElement("span");
+      tailPart.textContent = templateChunks[slotCount] || "";
+      sentenceContainer.appendChild(tailPart);
+
+      bankContainer.innerHTML = "";
+      var usedList = slotTokensChosen();
+      var leftInBank = remainingBankTokens(wordBankMixed, usedList);
+      for (var bankWalk = 0; bankWalk < leftInBank.length; bankWalk += 1) {
+        bankContainer.appendChild(makeTokenChip(q.id, leftInBank[bankWalk], "bank", -1));
+      }
+      syncGapSlotsHidden(q.id, slotCount);
+    }
+
+    renderAllGaps();
+    gapDragRefreshers[q.id] = renderAllGaps;
+  }
+
+  function renderMatchPairsQuestion(qEl, q) {
+    var stems = q.matchLeftItems || [];
+    var rightSide = q.matchRightOptions || [];
+    var initialEmpty = [];
+    for (var clearMatch = 0; clearMatch < stems.length; clearMatch += 1) initialEmpty.push("");
+    matchPairsSlotKeysState[q.id] = initialEmpty;
+
+    var shell = document.createElement("div");
+    shell.className = "match-pairs-wrap";
+    shell.innerHTML =
+      '<p class="instruction">Перетащите окончания к началам фраз (или нажмите на вариант, затем на слот).</p>' +
+      '<div class="match-rows" data-mp-rows="' +
+      escapeHtml(q.id) +
+      '"></div>' +
+      '<p class="wo-bank-label">Окончания (банк)</p>' +
+      '<div class="wo-bank match-pairs-bank" data-mp-bank="' +
+      escapeHtml(q.id) +
+      '"></div>' +
+      '<input type="hidden" id="mp_hidden_' +
+      escapeHtml(q.id) +
+      '" name="answer_' +
+      escapeHtml(q.id) +
+      '" value="" />' +
+      '<p class="wo-hint">Нажмите на выбранное окончание в слоте, чтобы вернуть его в банк.</p>';
+    qEl.appendChild(shell);
+    var rowsHost = shell.querySelector(".match-rows");
+    var bankHost = shell.querySelector(".match-pairs-bank");
+    if (!rowsHost || !bankHost) return;
+
+    bankHost.addEventListener("dragover", function (hostOver) {
+      hostOver.preventDefault();
+    });
+    bankHost.addEventListener("drop", function (hostDropEv) {
+      hostDropEv.preventDefault();
+      if (document.body.classList.contains("test-locked")) return;
+      var mpPayload = hostDropEv.dataTransfer.getData("text/plain");
+      if (!mpPayload || mpPayload.indexOf("mp|") !== 0) return;
+      var mpSeg = mpPayload.split("|");
+      if (mpSeg.length < 5 || mpSeg[1] !== q.id || mpSeg[2] !== "slot") return;
+      var rowFrom = Number.parseInt(mpSeg[3], 10);
+      var board = matchPairsSlotKeysState[q.id];
+      if (!board || !Number.isFinite(rowFrom)) return;
+      board[rowFrom] = "";
+      renderMatchBoard();
+    });
+
+    var bankOrder = shuffleCopy(
+      rightSide.map(function (optItem) {
+        return String(optItem.key);
+      }),
+    );
+
+    function syncMatchHidden() {
+      var syncEl = document.getElementById("mp_hidden_" + q.id);
+      if (syncEl) syncEl.value = JSON.stringify(matchPairsSlotKeysState[q.id] || []);
+      scheduleSave();
+    }
+
+    function optionLabelForKey(letterKey) {
+      for (var search = 0; search < rightSide.length; search += 1) {
+        if (rightSide[search].key === letterKey) return rightSide[search].text;
+      }
+      return "";
+    }
+
+    function keysNotInSlots() {
+      var used = matchPairsSlotKeysState[q.id] || [];
+      var counts = {};
+      for (var countIdx = 0; countIdx < used.length; countIdx += 1) {
+        var letterStored = String(used[countIdx] || "").trim();
+        if (!letterStored) continue;
+        counts[letterStored] = (counts[letterStored] || 0) + 1;
+      }
+      var availableKeys = [];
+      for (var orderIdx = 0; orderIdx < bankOrder.length; orderIdx += 1) {
+        var cand = bankOrder[orderIdx];
+        var usedTimes = counts[cand] || 0;
+        if (usedTimes > 0) {
+          counts[cand] = usedTimes - 1;
+        } else {
+          availableKeys.push(cand);
+        }
+      }
+      return availableKeys;
+    }
+
+    function makeEndingChip(questionInnerId, optionKeyLetter, chipSource, rowPosition) {
+      var labelCaption = optionLabelForKey(optionKeyLetter);
+      var btnChip = document.createElement("button");
+      btnChip.type = "button";
+      btnChip.className = "wo-chip";
+      btnChip.textContent = optionCaption(optionKeyLetter, labelCaption || "—");
+      btnChip.draggable = true;
+      btnChip.dataset.mpKey = optionKeyLetter;
+      btnChip.addEventListener("click", function () {
+        if (document.body.classList.contains("test-locked")) return;
+        var matrix = matchPairsSlotKeysState[questionInnerId];
+        if (!matrix) return;
+        if (chipSource === "bank") {
+          var firstGap = -1;
+          for (var findEmpty = 0; findEmpty < matrix.length; findEmpty += 1) {
+            if (!matrix[findEmpty]) {
+              firstGap = findEmpty;
+              break;
+            }
+          }
+          if (firstGap < 0) return;
+          matrix[firstGap] = optionKeyLetter;
+          renderMatchBoard();
+          return;
+        }
+        if (chipSource === "slot" && rowPosition >= 0) {
+          matrix[rowPosition] = "";
+          renderMatchBoard();
+        }
+      });
+      btnChip.addEventListener("dragstart", function (evStart) {
+        evStart.dataTransfer.setData(
+          "text/plain",
+          "mp|" + questionInnerId + "|" + chipSource + "|" + String(rowPosition) + "|" + optionKeyLetter,
+        );
+        evStart.dataTransfer.effectAllowed = "move";
+      });
+      return btnChip;
+    }
+
+    function bindSlotDrop(slotElement, rowIndex) {
+      slotElement.addEventListener("dragover", function (evSlotOver) {
+        evSlotOver.preventDefault();
+        slotElement.classList.add("wo-drag-over");
+      });
+      slotElement.addEventListener("dragleave", function () {
+        slotElement.classList.remove("wo-drag-over");
+      });
+      slotElement.addEventListener("drop", function (evSlotDrop) {
+        evSlotDrop.preventDefault();
+        slotElement.classList.remove("wo-drag-over");
+        if (document.body.classList.contains("test-locked")) return;
+        var rawMp = evSlotDrop.dataTransfer.getData("text/plain");
+        if (!rawMp || rawMp.indexOf("mp|") !== 0) return;
+        var segments = rawMp.split("|");
+        if (segments.length < 5 || segments[1] !== q.id) return;
+        var zoneFrom = segments[2];
+        var oldRow = Number.parseInt(segments[3], 10);
+        var keyLetter = segments[4] || "";
+        var matrixNow = matchPairsSlotKeysState[q.id];
+        if (!matrixNow) return;
+        if (zoneFrom === "bank") {
+          matrixNow[rowIndex] = keyLetter;
+        } else if (zoneFrom === "slot") {
+          if (!Number.isFinite(oldRow)) return;
+          if (oldRow === rowIndex) return;
+          var tempSwap = matrixNow[rowIndex];
+          matrixNow[rowIndex] = matrixNow[oldRow];
+          matrixNow[oldRow] = tempSwap;
+        }
+        renderMatchBoard();
+      });
+    }
+
+    function renderMatchBoard() {
+      rowsHost.innerHTML = "";
+      bankHost.innerHTML = "";
+      var matrixView = matchPairsSlotKeysState[q.id] || [];
+      for (var stemIdx = 0; stemIdx < stems.length; stemIdx += 1) {
+        var rowDiv = document.createElement("div");
+        rowDiv.className = "match-row";
+        var num = document.createElement("span");
+        num.className = "match-stem-num";
+        num.textContent = String(stemIdx + 1) + ")";
+        var stemBody = document.createElement("span");
+        stemBody.className = "match-stem-text";
+        stemBody.textContent = stems[stemIdx] || "";
+        var slotBox = document.createElement("div");
+        slotBox.className = "match-slot wo-answer";
+        slotBox.dataset.mpSlot = String(stemIdx);
+        var keyInSlot = matrixView[stemIdx] || "";
+        if (keyInSlot) {
+          slotBox.appendChild(makeEndingChip(q.id, keyInSlot, "slot", stemIdx));
+        } else {
+          slotBox.textContent = "— перетащите сюда —";
+        }
+        bindSlotDrop(slotBox, stemIdx);
+        rowDiv.appendChild(num);
+        rowDiv.appendChild(stemBody);
+        rowDiv.appendChild(slotBox);
+        rowsHost.appendChild(rowDiv);
+      }
+      var freeKeys = keysNotInSlots();
+      for (var freeWalk = 0; freeWalk < freeKeys.length; freeWalk += 1) {
+        bankHost.appendChild(makeEndingChip(q.id, freeKeys[freeWalk], "bank", -1));
+      }
+      syncMatchHidden();
+    }
+
+    renderMatchBoard();
+    matchPairsRefreshers[q.id] = renderMatchBoard;
+  }
+
+  function renderCheckboxQuestion(qEl, q) {
+    if (!q.options) return;
+    var box = document.createElement("div");
+    box.className = "options checkbox-options";
+    for (var oi = 0; oi < q.options.length; oi += 1) {
+      var op = q.options[oi];
+      var inputId = q.id + "_cb_" + op.key;
+      var lab = document.createElement("label");
+      lab.className = "option";
+      lab.htmlFor = inputId;
+      var inp = document.createElement("input");
+      inp.type = "checkbox";
+      inp.id = inputId;
+      inp.name = "answer_cb_" + q.id;
+      inp.value = op.key;
+      inp.addEventListener("change", scheduleSave);
+      lab.appendChild(inp);
+      var span = document.createElement("span");
+      span.textContent = optionCaption(op.key, op.text);
+      lab.appendChild(span);
+      box.appendChild(lab);
+    }
+    qEl.appendChild(box);
+  }
+
   function remainingBankTokens(wordBank, answer) {
     var counts = {};
     for (var wi = 0; wi < wordBank.length; wi += 1) {
@@ -319,6 +913,29 @@
       .slice()
       .sort()
       .join("\u0001") === b.slice().sort().join("\u0001");
+  }
+
+  function gapStudentAnswerLooksEmpty(question, stored) {
+    var filled = parseGapDragAnswerStored(
+      typeof stored === "string" ? stored : "",
+      gapSlotCountEffective(question),
+    );
+    return !filled.some(function (word) {
+      return String(word || "").trim() !== "";
+    });
+  }
+
+  function matchPairsAnswerLooksEmpty(stored, leftCount) {
+    if (typeof stored !== "string" || !stored.trim()) return true;
+    try {
+      var keysArray = JSON.parse(stored.trim());
+      if (!Array.isArray(keysArray) || keysArray.length !== leftCount) return true;
+      return !keysArray.some(function (letter) {
+        return String(letter || "").trim() !== "";
+      });
+    } catch (_) {
+      return true;
+    }
   }
 
   function applySavedWordOrder(qid, answerArr) {
@@ -384,6 +1001,45 @@
       if (v === undefined || v === null) continue;
       if (inputKind === "wordOrder" && Array.isArray(v)) {
         applySavedWordOrder(q.id, v);
+        continue;
+      }
+      if (inputKind === "gapDrag" && typeof v === "string" && v.trim()) {
+        gapDragSlotAnswers[q.id] = parseGapDragAnswerStored(v.trim(), gapSlotCountEffective(q));
+        if (gapDragRefreshers[q.id]) gapDragRefreshers[q.id]();
+        continue;
+      }
+      if (inputKind === "matchPairs" && typeof v === "string" && v.trim()) {
+        var leftCountMp = (q.matchLeftItems || []).length;
+        try {
+          var mpArr = JSON.parse(v.trim());
+          if (Array.isArray(mpArr) && mpArr.length === leftCountMp) {
+            matchPairsSlotKeysState[q.id] = mpArr.map(function (letterPiece) {
+              return String(letterPiece || "").trim();
+            });
+          }
+        } catch (_) {
+          /* ignore */
+        }
+        if (matchPairsRefreshers[q.id]) matchPairsRefreshers[q.id]();
+        continue;
+      }
+      if (inputKind === "checkbox" && typeof v === "string" && v.trim()) {
+        var keyParts = v
+          .split(",")
+          .map(function (k) {
+            return k.trim();
+          })
+          .filter(Boolean);
+        for (var ki = 0; ki < keyParts.length; ki += 1) {
+          var esc2 =
+            typeof CSS !== "undefined" && CSS.escape
+              ? CSS.escape(keyParts[ki])
+              : keyParts[ki].replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+          var cb = document.querySelector(
+            'input[name="answer_cb_' + q.id + '"][value="' + esc2 + '"]',
+          );
+          if (cb) cb.checked = true;
+        }
         continue;
       }
       if (inputKind === "select") {
@@ -497,6 +1153,12 @@
 
           if (inputKind === "wordOrder") {
             renderWordOrderQuestion(qEl, q);
+          } else if (inputKind === "gapDrag") {
+            renderGapDragQuestion(qEl, q);
+          } else if (inputKind === "matchPairs") {
+            renderMatchPairsQuestion(qEl, q);
+          } else if (inputKind === "checkbox" && q.options) {
+            renderCheckboxQuestion(qEl, q);
           } else if (inputKind === "select" && q.options) {
             var selId = "answer_select_" + q.id;
             var sel =
@@ -566,6 +1228,26 @@
         out[q.id] = wordOrderState[q.id] ? wordOrderState[q.id].answer.slice() : [];
         continue;
       }
+      if (inputKind === "gapDrag") {
+        var hiddenGap = document.getElementById("gd_hidden_" + q.id);
+        out[q.id] = hiddenGap && hiddenGap.value ? hiddenGap.value : "";
+        continue;
+      }
+      if (inputKind === "matchPairs") {
+        var hiddenMp = document.getElementById("mp_hidden_" + q.id);
+        out[q.id] = hiddenMp && hiddenMp.value ? hiddenMp.value : "";
+        continue;
+      }
+      if (inputKind === "checkbox") {
+        var cbs = document.querySelectorAll('input[name="answer_cb_' + q.id + '"]:checked');
+        var keyList = [];
+        for (var cbi = 0; cbi < cbs.length; cbi += 1) {
+          keyList.push(cbs[cbi].value);
+        }
+        keyList.sort();
+        out[q.id] = keyList.join(",");
+        continue;
+      }
       if (inputKind === "select") {
         var sel = document.getElementById("answer_select_" + q.id);
         out[q.id] = sel && sel.value ? sel.value : "";
@@ -589,16 +1271,36 @@
           ? Array.isArray(raw)
             ? raw.join(" ")
             : ""
-          : typeof raw === "string"
-            ? raw
-            : "";
+          : item.inputKind === "gapDrag" || item.inputKind === "matchPairs"
+            ? typeof raw === "string"
+              ? raw
+              : ""
+            : item.inputKind === "checkbox"
+              ? typeof raw === "string"
+                ? raw
+                : ""
+              : typeof raw === "string"
+                ? raw
+                : "";
+      var emptyAnswer =
+        item.inputKind === "wordOrder"
+          ? !Array.isArray(raw) || raw.length === 0
+          : item.inputKind === "gapDrag"
+            ? gapStudentAnswerLooksEmpty(q, typeof raw === "string" ? raw : "")
+            : item.inputKind === "matchPairs"
+              ? matchPairsAnswerLooksEmpty(
+                  typeof raw === "string" ? raw : "",
+                  (q.matchLeftItems || []).length,
+                )
+              : item.inputKind === "checkbox"
+                ? !String(chosen).trim()
+                : chosen === "";
       var ok = isAnswerCorrect(item, chosen);
       if (ok) score += 1;
       var correctLine = correctAnswerDisplay(item);
-      var studentLine =
-        chosen === "" || (Array.isArray(raw) && raw.length === 0)
-          ? "(нет ответа) ❌"
-          : studentAnswerDisplay(item, chosen) + (ok ? " ✅" : " ❌");
+      var studentLine = emptyAnswer
+        ? "(нет ответа) ❌"
+        : studentAnswerDisplay(item, chosen) + (ok ? " ✅" : " ❌");
       rows.push({
         serial: item.serial,
         qid: q.id,
@@ -624,7 +1326,7 @@
   function lockTest() {
     document.body.classList.add("test-locked");
     var nodes = document.querySelectorAll(
-      '#test-root input[type="radio"], #test-root input[type="hidden"], #test-root select, #student-name, #finish-btn',
+      '#test-root input[type="radio"], #test-root input[type="checkbox"], #test-root input[type="hidden"], #test-root select, #student-name, #finish-btn',
     );
     for (var i = 0; i < nodes.length; i += 1) {
       nodes[i].setAttribute("disabled", "disabled");

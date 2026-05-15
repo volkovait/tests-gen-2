@@ -125,7 +125,35 @@ export function getGigaChatScope(): string {
 }
 
 export function getGigaChatModel(): string {
-  return process.env.GIGACHAT_MODEL?.trim() || 'GigaChat'
+  return process.env.GIGACHAT_MODEL?.trim() || 'GigaChat-2-Pro'
+}
+
+/**
+ * Модель для генерации JSON-спеки теста (первый проход). По умолчанию совпадает с {@link getGigaChatModel}.
+ * Задайте `GIGACHAT_MODEL_SPEC` (например более мощную), если базовую модель оставляете «лёгкой» для остальных узлов.
+ */
+export function getGigaChatModelSpec(): string {
+  const fromEnv = process.env.GIGACHAT_MODEL_SPEC?.trim()
+  if (fromEnv) return fromEnv
+  return getGigaChatModel()
+}
+
+/**
+ * Модель для repair JSON после ошибок Zod. По умолчанию совпадает с {@link getGigaChatModelSpec}.
+ */
+export function getGigaChatModelRepair(): string {
+  const fromEnv = process.env.GIGACHAT_MODEL_REPAIR?.trim()
+  if (fromEnv) return fromEnv
+  return getGigaChatModelSpec()
+}
+
+/**
+ * Модель для deep agent планировщика теста (супервизор). По умолчанию совпадает с {@link getGigaChatModelSpec}.
+ */
+export function getGigaChatModelPlanner(): string {
+  const fromEnv = process.env.GIGACHAT_MODEL_PLANNER?.trim()
+  if (fromEnv) return fromEnv
+  return getGigaChatModelSpec()
 }
 
 /**

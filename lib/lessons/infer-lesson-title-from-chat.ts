@@ -1,4 +1,4 @@
-import { gigachatChatCompletion } from '@/lib/gigachat'
+import { llmChatCompletion } from '@/lib/llm/chat-completion'
 import type { GigaChatMessage } from '@/lib/gigachat/types'
 import { LABELS } from '@/lib/consts'
 
@@ -37,10 +37,10 @@ function buildDialogueSnippet(
 }
 
 /**
- * Короткое название теста по переписке: сначала пробуем GigaChat, затем первую реплику пользователя, иначе дефолт.
+ * Короткое название теста по переписке: сначала пробуем LLM, затем первую реплику пользователя, иначе дефолт.
  */
 export type InferLessonTitleLogOptions = {
-  /** Если задано, вызов GigaChat пишется в `infer-title.txt` в этой папке. */
+  /** Если задано, вызов модели пишется в `infer-title.txt` в этой папке. */
   logDir?: string
 }
 
@@ -68,7 +68,7 @@ export async function inferLessonTitleFromChat(
   ]
 
   try {
-    const raw = await gigachatChatCompletion(completionMessages, {
+    const raw = await llmChatCompletion(completionMessages, {
       maxTokens: 96,
       temperature: 0.35,
       ...(logOptions?.logDir

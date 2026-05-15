@@ -1,5 +1,7 @@
+import { describeImageMaterialForLesson } from '@/lib/agents/image-material-description'
+import { LessonGenerationBlockedError } from '@/lib/agents/lesson-generation-blocked-error'
 import { createClient } from '@/lib/supabase/server'
-import { extractPdfText } from '@/lib/pdf/extract-pdf-text'
+import { extractPdfAsMarkdown } from '@/lib/pdf/extract-pdf-text'
 import {
   createPendingLessonLogDir,
   finalizeLessonLogDir,
@@ -14,18 +16,6 @@ import { LABELS } from '@/lib/consts'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
-
-function imagePlaceholderText(fileName: string): string {
-  return [
-    'Пользователь загрузил изображение учебного материала.',
-    `Имя файла: ${fileName}.`,
-    'Содержимое изображения в этом контуре не распознано автоматически.',
-    'Сгенерируй обобщённый, но полезный языковой тест (лексика + грамматика + упражнения),',
-    'который подойдёт как шаблон после уточнения темы пользователем в чате.',
-    'Используй нейтральную тему вроде «повторение времени Present Simple» или «лексика путешествий»,',
-    'и явно напиши в тесте короткий блок: «Если ваш материал о другой теме — обсудите это в чате и создайте тест заново».',
-  ].join(' ')
-}
 
 export async function POST(request: Request) {
   let lessonLogDir: string | null = null
@@ -71,13 +61,17 @@ export async function POST(request: Request) {
       const buf = await file.arrayBuffer()
       if (file.type === 'application/pdf') {
         sourceType = 'pdf'
-        materialSummary = await extractPdfText(buf)
+        materialSummary = await extractPdfAsMarkdown(buf)
         if (!materialSummary.trim()) {
           return NextResponse.json({ error: LABELS.API_GENERATE_PDF_EXTRACT_FAILED }, { status: 400 })
         }
       } else if (file.type.startsWith('image/')) {
         sourceType = 'image'
-        materialSummary = imagePlaceholderText(file.name)
+        materialSummary = await describeImageMaterialForLesson({
+          arrayBuffer: buf,
+          mimeType: file.type,
+          fileName: file.name,
+        })
       } else {
         return NextResponse.json({ error: LABELS.API_GENERATE_UNSUPPORTED_FILE }, { status: 400 })
       }
@@ -100,21 +94,26 @@ export async function POST(request: Request) {
       if (h && h.length > 0) correctAnswersHint = h.slice(0, 16_000)
     }
 
-    const { html, validationWarnings } = await generateInteractiveHtmlLesson({
+    const { html, validationWarnings, spec } = await generateInteractiveHtmlLesson({
       title,
       materialSummary,
       ...(correctAnswersHint ? { correctAnswersHint } : {}),
       logDir: await ensureLessonLogDir(),
     })
+    const specRecord = spec as unknown as Record<string, unknown>
     const lessonId = await saveLessonRow(supabase, user.id, {
       title,
       sourceType,
       sourceFilename,
       htmlBody: html,
+      specJson: specRecord,
       meta: {
         generatedAt: new Date().toISOString(),
         lessonEngine: 'spec-v1',
         ...(validationWarnings.length > 0 ? { validationWarnings } : {}),
+        ...(validationWarnings.length > 0 && (sourceType === 'pdf' || sourceType === 'image')
+          ? { partialSourceIngest: true }
+          : {}),
       },
     })
 
@@ -129,11 +128,17 @@ export async function POST(request: Request) {
       documentUrl: `/learn/${lessonId}/document`,
       validationWarnings,
     })
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Server error'
-    console.error('[generate-interactive-page]', e)
+  } catch (error) {
+    if (error instanceof LessonGenerationBlockedError) {
+      return NextResponse.json(
+        { error: error.userMessage, code: error.code },
+        { status: 422 },
+      )
+    }
+    const msg = error instanceof Error ? error.message : 'Server error'
+    console.error('[generate-interactive-page]', error)
     if (lessonLogDir) {
-      await writeLessonFlowErrorLog(lessonLogDir, e)
+      await writeLessonFlowErrorLog(lessonLogDir, error)
     }
     return NextResponse.json({ error: msg }, { status: 500 })
   }
