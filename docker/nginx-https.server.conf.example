@@ -1,0 +1,35 @@
+# Подключение после certbot: скопируйте в docker/nginx-https.server.conf и в nginx.conf
+# раскомментируйте строку include /etc/nginx/https-server.conf;
+# В docker-compose.yml у сервиса nginx добавьте монтирование:
+#   - ./docker/nginx-https.server.conf:/etc/nginx/https-server.conf:ro
+
+server {
+  listen 443 ssl;
+  server_name lingua-bloom.ru www.lingua-bloom.ru;
+  client_max_body_size 50m;
+
+  ssl_certificate /etc/letsencrypt/live/lingua-bloom.ru/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/lingua-bloom.ru/privkey.pem;
+
+  resolver 127.0.0.11 valid=10s ipv6=off;
+  resolver_timeout 5s;
+
+  location / {
+    set $upstream_app app:3000;
+    proxy_pass http://$upstream_app$request_uri;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+
+    proxy_buffer_size 64k;
+    proxy_buffers 8 64k;
+    proxy_busy_buffers_size 128k;
+  }
+
+  location /.well-known/acme-challenge/ { root /var/www/certbot; }
+}
