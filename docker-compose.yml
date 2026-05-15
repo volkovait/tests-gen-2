@@ -2,6 +2,8 @@
 # Nginx :80 → Next.js; static-server доступен приложению по имени сервиса.
 #
 # Подготовьте .env в корне репозитория (или экспортируйте переменные) с:
+#   Временно без входа: AUTH_DISABLED=true; для middleware — NEXT_PUBLIC_AUTH_DISABLED=true
+#   (добавьте в build args / пересоберите app). Записи без сессии: AUTH_DISABLED_IMPERSONATE_USER_ID=<uuid>.
 #   NEXT_PUBLIC_SUPABASE_URL (для сборки и клиента)
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY  (или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
 #   Опционально сервер без пересборки, если в образе зашиты пустые NEXT_PUBLIC_*:
@@ -36,9 +38,13 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      # Подставляет переменные из .env в среду шага `RUN pnpm build` (файл .env в образ не попадает).
-      env_file:
-        - .env
+      # Подстановка из `.env` рядом с compose (Compose читает его для ${...} в args).
+      # Достаточно publishable; anon опционален — пустое значение не мешает (см. lib/supabase/env.ts).
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_AUTH_DISABLED: ${NEXT_PUBLIC_AUTH_DISABLED:-}
     env_file:
       - .env
     environment:

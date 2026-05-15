@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthDisabled } from "@/lib/auth/auth-disabled"
 import { notFound, redirect } from "next/navigation"
 import TestTakingClient from "./test-client"
 
@@ -31,16 +32,16 @@ export default async function TestPage({ params }: { params: Promise<{ id: strin
   
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (!isAuthDisabled() && !user) {
     redirect("/auth/login")
   }
 
-  const { data: test, error } = await supabase
-    .from("tests")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single()
+  let testQuery = supabase.from("tests").select("*").eq("id", id)
+  if (user !== null) {
+    testQuery = testQuery.eq("user_id", user.id)
+  }
+
+  const { data: test, error } = await testQuery.single()
 
   if (error || !test) {
     notFound()

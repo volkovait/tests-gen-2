@@ -54,7 +54,8 @@ export async function updateLessonGenerationRun(
   supabase: SupabaseClient,
   input: {
     runId: string
-    userId: string
+    /** `null` — не фильтровать по владельцу (только при AUTH_DISABLED). */
+    userId: string | null
     status?: 'running' | 'interrupted' | 'failed' | 'completed'
     phase?: string
     mode?: 'ready_material' | 'raw_material'
@@ -75,21 +76,24 @@ export async function updateLessonGenerationRun(
   if (input.errorMessage !== undefined) patch.error_message = input.errorMessage
 
   if (input.payloadPatch && Object.keys(input.payloadPatch).length > 0) {
-    const { data: current } = await supabase
+    let payloadQuery = supabase
       .from('lesson_generation_runs')
       .select('payload')
       .eq('id', input.runId)
-      .eq('user_id', input.userId)
-      .maybeSingle()
+    if (input.userId !== null) {
+      payloadQuery = payloadQuery.eq('user_id', input.userId)
+    }
+    const { data: current } = await payloadQuery.maybeSingle()
     const prev = (current?.payload as Record<string, unknown> | undefined) ?? {}
     patch.payload = { ...prev, ...input.payloadPatch }
   }
 
-  const { error } = await supabase
-    .from('lesson_generation_runs')
-    .update(patch)
-    .eq('id', input.runId)
-    .eq('user_id', input.userId)
+  let updateQuery = supabase.from('lesson_generation_runs').update(patch).eq('id', input.runId)
+  if (input.userId !== null) {
+    updateQuery = updateQuery.eq('user_id', input.userId)
+  }
+
+  const { error } = await updateQuery
 
   if (error) {
     throw new Error(error.message)
@@ -98,14 +102,17 @@ export async function updateLessonGenerationRun(
 
 export async function fetchLessonGenerationRun(
   supabase: SupabaseClient,
-  input: { runId: string; userId: string },
+  input: { runId: string; userId: string | null },
 ): Promise<LessonGenerationRunRow | null> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('lesson_generation_runs')
     .select('id, user_id, thread_id, status, phase, mode, lesson_id, error_code, error_message, title, payload')
     .eq('id', input.runId)
-    .eq('user_id', input.userId)
-    .maybeSingle()
+  if (input.userId !== null) {
+    query = query.eq('user_id', input.userId)
+  }
+
+  const { data, error } = await query.maybeSingle()
 
   if (error) {
     throw new Error(error.message)
@@ -154,7 +161,7 @@ export async function appendLessonGenerationEvent(
 
 export async function listLessonGenerationEvents(
   supabase: SupabaseClient,
-  input: { runId: string; userId: string; afterSeq?: number },
+  input: { runId: string; userId: string | null; afterSeq?: number },
 ): Promise<
   Array<{
     seq: number

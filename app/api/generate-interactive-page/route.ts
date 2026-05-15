@@ -1,6 +1,7 @@
 import { describeImageMaterialForLesson } from '@/lib/agents/image-material-description'
 import { LessonGenerationBlockedError } from '@/lib/agents/lesson-generation-blocked-error'
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled, resolveActingUserId } from '@/lib/auth/auth-disabled'
 import { extractPdfAsMarkdown } from '@/lib/pdf/extract-pdf-text'
 import {
   createPendingLessonLogDir,
@@ -24,7 +25,11 @@ export async function POST(request: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const actingUserId = resolveActingUserId(user)
+    if (actingUserId === undefined) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -101,7 +106,7 @@ export async function POST(request: Request) {
       logDir: await ensureLessonLogDir(),
     })
     const specRecord = spec as unknown as Record<string, unknown>
-    const lessonId = await saveLessonRow(supabase, user.id, {
+    const lessonId = await saveLessonRow(supabase, actingUserId, {
       title,
       sourceType,
       sourceFilename,

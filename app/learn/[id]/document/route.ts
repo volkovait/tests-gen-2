@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { LABELS } from '@/lib/consts'
 import { sanitizeLessonHtmlForDelivery } from '@/lib/html-lesson/sanitize-lesson-html'
 import { NextResponse } from 'next/server'
@@ -11,11 +12,13 @@ export async function GET(
 ) {
   const { id } = await context.params
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return new NextResponse(LABELS.LEARN_DOC_AUTH_REQUIRED, { status: 401, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+  if (!isAuthDisabled()) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      return new NextResponse(LABELS.LEARN_DOC_AUTH_REQUIRED, { status: 401, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+    }
   }
 
   const { data: lesson, error } = await supabase.from('lessons').select('html_body').eq('id', id).maybeSingle()

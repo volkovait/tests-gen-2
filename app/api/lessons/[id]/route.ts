@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthDisabled } from "@/lib/auth/auth-disabled"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function DELETE(
@@ -12,7 +13,7 @@ export async function DELETE(
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -26,7 +27,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Lesson not found" }, { status: 404 })
     }
 
-    if (lesson.user_id !== user.id) {
+    if (user !== null && lesson.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

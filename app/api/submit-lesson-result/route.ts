@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthDisabled, resolveActingUserId } from "@/lib/auth/auth-disabled"
 import { z } from "zod"
 import { NextResponse } from "next/server"
 
@@ -18,7 +19,11 @@ export async function POST(request: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const actingUserId = resolveActingUserId(user)
+    if (actingUserId === undefined) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -31,14 +36,18 @@ export async function POST(request: Request) {
     const { lessonId, score, totalQuestions, payload } = parsed.data
     const percentage = (score / totalQuestions) * 100
 
-    const { data: lesson } = await supabase.from("lessons").select("id").eq("id", lessonId).eq("user_id", user.id).maybeSingle()
+    let lessonQuery = supabase.from("lessons").select("id").eq("id", lessonId)
+    if (user !== null) {
+      lessonQuery = lessonQuery.eq("user_id", user.id)
+    }
+    const { data: lesson } = await lessonQuery.maybeSingle()
     if (!lesson) {
       return NextResponse.json({ error: "Lesson not found" }, { status: 404 })
     }
 
     const { error } = await supabase.from("lesson_attempts").insert({
       lesson_id: lessonId,
-      user_id: user.id,
+      user_id: actingUserId,
       score,
       total_questions: totalQuestions,
       percentage,

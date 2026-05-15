@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthDisabled } from "@/lib/auth/auth-disabled"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
@@ -14,21 +15,32 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (!isAuthDisabled() && !user) {
     redirect("/auth/login")
   }
 
-  const lessonsRes = await supabase
-    .from("lessons")
-    .select("id, title, source_type, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(8)
+  const userId = user?.id ?? null
+
+  const lessonsRes =
+    userId !== null
+      ? await supabase
+          .from("lessons")
+          .select("id, title, source_type, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(8)
+      : { data: [] as const, error: null as null }
 
   const recentLessons = lessonsRes.error ? [] : lessonsRes.data ?? []
 
-  const profileRes = await supabase.from("profiles").select("display_name").eq("id", user.id).single()
-  const displayName = profileRes.data?.display_name || user.email?.split("@")[0] || LABELS.DEFAULT_STUDENT_NAME
+  const profileRes =
+    userId !== null
+      ? await supabase.from("profiles").select("display_name").eq("id", userId).single()
+      : { data: null as { display_name?: string | null } | null }
+  const displayName =
+    user !== null
+      ? profileRes.data?.display_name || user.email?.split("@")[0] || LABELS.DEFAULT_STUDENT_NAME
+      : "Гость"
 
   return (
     <AppShell active="dashboard">

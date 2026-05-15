@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled, resolveActingUserId } from '@/lib/auth/auth-disabled'
 import { fileToMaterialText } from '@/lib/lesson-runs/file-to-material-text'
 import { createPendingLessonLogDir } from '@/lib/gigachat/model-request-log'
 import {
@@ -23,7 +24,11 @@ export async function POST(request: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const actingUserId = resolveActingUserId(user)
+    if (actingUserId === undefined) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -63,7 +68,7 @@ export async function POST(request: Request) {
 
     await insertLessonGenerationRun(supabase, {
       runId,
-      userId: user.id,
+      userId: actingUserId,
       threadId,
       mode: 'ready_material',
       title,
@@ -81,7 +86,7 @@ export async function POST(request: Request) {
 
     const result = await invokeLessonGenerationGraph({
       supabase,
-      userId: user.id,
+      userId: actingUserId,
       runId,
       threadId,
       initialState: {

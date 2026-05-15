@@ -1,6 +1,7 @@
 import { Command } from '@langchain/langgraph'
 
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { invokeLessonGenerationGraph } from '@/lib/lesson-generation/run-executor'
 import { isTerminalLessonGenerationFailure } from '@/lib/lesson-generation/lesson-run-failure'
 import { lessonRunsTableMissingHint } from '@/lib/lesson-generation/lesson-runs-db-error'
@@ -17,15 +18,18 @@ export async function POST(request: Request, routeContext: { params: Promise<{ i
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id: runId } = await routeContext.params
-    const run = await fetchLessonGenerationRun(supabase, { runId, userId: user.id })
+    const fetchUserId = user !== null ? user.id : null
+    const run = await fetchLessonGenerationRun(supabase, { runId, userId: fetchUserId })
     if (!run) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
+
+    const graphUserId = user?.id ?? run.user_id
 
     const json: unknown = await request.json()
     const parsed = lessonRunResumeBodySchema.safeParse(json)
@@ -35,14 +39,14 @@ export async function POST(request: Request, routeContext: { params: Promise<{ i
 
     await updateLessonGenerationRun(supabase, {
       runId,
-      userId: user.id,
+      userId: fetchUserId,
       status: 'running',
       phase: 'resumed',
     })
 
     const result = await invokeLessonGenerationGraph({
       supabase,
-      userId: user.id,
+      userId: graphUserId,
       runId,
       threadId: run.thread_id,
       command: new Command({ resume: parsed.data.resume }),

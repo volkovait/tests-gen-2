@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { lessonRunsTableMissingHint } from '@/lib/lesson-generation/lesson-runs-db-error'
 import { fetchLessonGenerationRun, listLessonGenerationEvents } from '@/lib/lesson-generation/supabase-runs'
 import { NextResponse } from 'next/server'
@@ -11,12 +12,13 @@ export async function GET(request: Request, routeContext: { params: Promise<{ id
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
+    if (!isAuthDisabled() && !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id: runId } = await routeContext.params
-    const run = await fetchLessonGenerationRun(supabase, { runId, userId: user.id })
+    const fetchUserId = user !== null ? user.id : null
+    const run = await fetchLessonGenerationRun(supabase, { runId, userId: fetchUserId })
     if (!run) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
@@ -28,7 +30,7 @@ export async function GET(request: Request, routeContext: { params: Promise<{ id
 
     const events = await listLessonGenerationEvents(supabase, {
       runId,
-      userId: user.id,
+      userId: fetchUserId,
       ...(Number.isFinite(afterSeq) ? { afterSeq } : {}),
     })
 

@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { AppShell } from '@/components/app-shell'
+import { isAuthDisabled } from '@/lib/auth/auth-disabled'
 import { createClient } from '@/lib/supabase/server'
 import { parseValidationWarningsFromLessonMeta } from '@/lib/lessons/lesson-partial-validation-meta'
 import type { LessonSourceType } from '@/lib/lessons/save-lesson'
@@ -18,7 +19,7 @@ export default async function LearnViewPage({ params }: { params: Promise<{ id: 
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) {
+  if (!isAuthDisabled() && !user) {
     redirect(`/auth/login?next=${encodeURIComponent(`/learn/${id}/view`)}`)
   }
 
