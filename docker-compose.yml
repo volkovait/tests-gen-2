@@ -26,7 +26,8 @@ services:
       - "443:443"
     volumes:
       - ./docker/nginx.conf:/etc/nginx/nginx.conf
-      # Certbot на сервере кладёт ключи в /etc/letsencrypt; ./etc/letsencrypt в репо пустой → nginx не видит fullchain.pem
+      - ./docker/nginx-https.server.conf:/etc/nginx/https-server.conf:ro
+      # Certbot на сервере: /etc/letsencrypt → контейнер; без live/lingua-bloom.ru/ nginx не поднимется с включённым include.
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - app
