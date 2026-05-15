@@ -2,8 +2,10 @@
 # Nginx :80 → Next.js; static-server доступен приложению по имени сервиса.
 #
 # Подготовьте .env в корне репозитория (или экспортируйте переменные) с:
-#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_URL (для сборки и клиента)
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY  (или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+#   Опционально сервер без пересборки, если в образе зашиты пустые NEXT_PUBLIC_*:
+#   SUPABASE_URL и SUPABASE_ANON_KEY или SUPABASE_PUBLISHABLE_KEY (те же строки)
 #   GIGACHAT_CLIENT_ID, GIGACHAT_CLIENT_SECRET
 #   GIGACHAT_CA_CERT — путь внутри контейнера к PEM (по умолчанию /app/certs/russian_root.crt).
 #   Положите файл на сервере в ./docker/certs/russian_root.crt рядом с compose — он смонтируется в контейнер.
@@ -34,17 +36,15 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+      # Подставляет переменные из .env в среду шага `RUN pnpm build` (файл .env в образ не попадает).
+      env_file:
+        - .env
     env_file:
       - .env
     environment:
       STATIC_SERVER_URL: http://static-server:3001
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+      # Supabase NEXT_PUBLIC_* только из env_file выше. Дублирование через ${VAR} здесь при пустой
+      # подстановке перезаписывает env_file — в контейнере ключ оказывается пустым.
       # Корень НУЦ для TLS к GigaChat; путь в контейнере. Файл с хоста: ./docker/certs/russian_root.crt
       GIGACHAT_CA_CERT: ${GIGACHAT_CA_CERT:-/app/certs/russian_root.crt}
     volumes:
